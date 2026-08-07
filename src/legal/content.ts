@@ -31,8 +31,8 @@ export const APP_INFO = {
   name: "程序员计算器",
   appNameEn: "Programmer Calculator",
   version: "1.0.0",
-  developer: "lan0o0",
-  contactEmail: "lan0o0@users.noreply.github.com",
+  developer: "郑州格一网络有限公司",
+  contactEmail: "lan0o0@qq.com",
   updateDate: "2026-08-07",
 } as const;
 
@@ -85,7 +85,6 @@ export const USER_AGREEMENT: LegalDocument = {
       heading: "六、联系方式",
       paragraphs: [
         "如对本协议有任何疑问,可通过以下方式联系开发者:",
-        "GitHub: https://github.com/lan0o0",
         "邮箱:" + APP_INFO.contactEmail,
       ],
     },
@@ -160,7 +159,6 @@ export const PRIVACY_POLICY: LegalDocument = {
       heading: "八、联系我们",
       paragraphs: [
         "如对本政策有任何疑问或建议,可通过以下方式联系:",
-        "GitHub: https://github.com/lan0o0",
         "邮箱:" + APP_INFO.contactEmail,
       ],
     },
@@ -222,7 +220,6 @@ export const PERSONAL_INFO_LIST: LegalDocument = {
       heading: "六、咨询与投诉",
       paragraphs: [
         "如对本清单有任何疑问,可通过以下方式联系:",
-        "GitHub: https://github.com/lan0o0",
         "邮箱:" + APP_INFO.contactEmail,
       ],
     },

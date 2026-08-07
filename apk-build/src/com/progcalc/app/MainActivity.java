@@ -9,6 +9,7 @@ import android.view.ViewTreeObserver;
 import android.webkit.ConsoleMessage;
 import android.webkit.JsPromptResult;
 import android.webkit.JsResult;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
@@ -55,6 +56,8 @@ public class MainActivity extends Activity {
                 FrameLayout.LayoutParams.MATCH_PARENT));
 
         webView = new WebView(this);
+        // 注入原生桥:供前端「不同意并退出」调用,仅暴露 exit()
+        webView.addJavascriptInterface(new ExitBridge(this), "appNative");
         // 强制硬件加速层
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
 
@@ -202,6 +205,26 @@ public class MainActivity extends Activity {
             String js = "document.documentElement.style.setProperty('--safe-top','" + topCss + "px');"
                     + "document.documentElement.style.setProperty('--safe-bottom','" + botCss + "px');";
             v.evaluateJavascript(js, null);
+        }
+    }
+
+    /** 命名 Runnable:在 UI 线程退出应用(JS 桥方法运行在 WebView 线程) */
+    static class ExitRunnable implements Runnable {
+        private final MainActivity activity;
+        ExitRunnable(MainActivity activity) { this.activity = activity; }
+        @Override
+        public void run() {
+            activity.finishAffinity();
+        }
+    }
+
+    /** JS 桥:前端调用 appNative.exit() 退出应用,仅暴露 exit() */
+    static class ExitBridge {
+        private final MainActivity activity;
+        ExitBridge(MainActivity activity) { this.activity = activity; }
+        @JavascriptInterface
+        public void exit() {
+            activity.runOnUiThread(new ExitRunnable(activity));
         }
     }
 }
