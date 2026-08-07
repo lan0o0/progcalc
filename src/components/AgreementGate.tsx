@@ -83,6 +83,11 @@ export default function AgreementGate({ onAgree }: Props) {
           <h1 className="text-[20px] font-semibold text-ink">欢迎使用本 App</h1>
         </div>
 
+        {/* App 介绍 */}
+        <p className="mt-5 px-1 text-center text-[13px] leading-relaxed text-ink/75">
+          本 app 专为程序员、计算机学生和嵌入式工程师打造！支持补码自动计算、多进制实时转换、位运算可视化，告别手算二进制，效率翻倍！
+        </p>
+
         {/* 说明 */}
         <p className="mt-6 text-center text-[14px] leading-relaxed text-ink/80">
           为了保障您的权益，请阅读并同意以下协议：
