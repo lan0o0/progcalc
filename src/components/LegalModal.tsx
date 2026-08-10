@@ -1,4 +1,5 @@
-import { X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { X, RefreshCw } from "lucide-react";
 import { LegalDocument } from "@/legal/content";
 import { cn } from "@/lib/utils";
 
@@ -8,8 +9,45 @@ interface Props {
   onClose: () => void;
 }
 
-/** 通用法律文本查看器:展示一份 LegalDocument 的标题/版本/章节。 */
+/**
+ * 通用法律文本查看器:通过 WebView/iframe 加载公网独立成文的协议页。
+ *
+ * 合规方案1:协议内容为公网独立 HTML 文件,可被监管验证,更新无需发版。
+ * 本地不保留协议正文副本,仅保留标题/版本等元数据用于展示。
+ */
 export default function LegalModal({ open, doc, onClose }: Props) {
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  // 加载超时定时器(8 秒未触发 onLoad 视为失败)
+  const timerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!open || !doc) return;
+    setLoading(true);
+    setFailed(false);
+    // 8 秒超时兜底:网络不通时 onLoad 不触发,需主动判失败
+    timerRef.current = window.setTimeout(() => {
+      setLoading(false);
+      setFailed(true);
+    }, 8000);
+    return () => {
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+    };
+  }, [open, doc, reloadKey]);
+
+  const handleIframeLoad = () => {
+    if (timerRef.current) window.clearTimeout(timerRef.current);
+    setLoading(false);
+    setFailed(false);
+  };
+
+  const handleRetry = () => {
+    setFailed(false);
+    setLoading(true);
+    setReloadKey((k) => k + 1);
+  };
+
   return (
     <>
       {/* 遮罩 */}
@@ -42,7 +80,9 @@ export default function LegalModal({ open, doc, onClose }: Props) {
               {/* 头部 */}
               <header className="flex items-center justify-between border-b border-divider px-4 py-3">
                 <div className="min-w-0">
-                  <h3 className="truncate text-sm font-semibold text-ink">{doc.title}</h3>
+                  <h3 className="truncate text-sm font-semibold text-ink">
+                    {doc.title}
+                  </h3>
                   <p className="font-mono text-[10px] text-inkDim">
                     {doc.version} · 更新于 {doc.updatedAt}
                   </p>
@@ -56,33 +96,44 @@ export default function LegalModal({ open, doc, onClose }: Props) {
                 </button>
               </header>
 
-              {/* 正文 */}
-              <div className="flex-1 overflow-y-auto px-4 py-4">
-                <p className="mb-4 text-[12px] leading-relaxed text-inkDim">{doc.intro}</p>
-                <div className="space-y-4">
-                  {doc.sections.map((sec, i) => (
-                    <section key={i}>
-                      <h4 className="mb-1.5 text-[13px] font-semibold text-ink">{sec.heading}</h4>
-                      {sec.paragraphs?.map((p, j) => (
-                        <p key={j} className="mb-1.5 text-[12px] leading-relaxed text-ink/80">
-                          {p}
-                        </p>
-                      ))}
-                      {sec.list && (
-                        <ul className="ml-4 list-disc space-y-1">
-                          {sec.list.map((item, k) => (
-                            <li
-                              key={k}
-                              className="text-[12px] leading-relaxed text-ink/80"
-                            >
-                              {item}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </section>
-                  ))}
-                </div>
+              {/* 正文:iframe 加载公网协议页 */}
+              <div className="relative flex-1 overflow-hidden bg-screen">
+                {/* 加载态 */}
+                {loading && !failed && (
+                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 text-inkDim">
+                    <RefreshCw size={20} className="animate-spin" />
+                    <span className="text-[12px]">正在加载协议内容…</span>
+                  </div>
+                )}
+
+                {/* 失败兜底:网络不通时提示重试 */}
+                {failed ? (
+                  <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 px-6 text-center">
+                    <p className="text-[13px] text-ink/80">
+                      协议内容加载失败
+                    </p>
+                    <p className="text-[11px] text-inkDim">
+                      请检查网络连接后重试
+                    </p>
+                    <button
+                      onClick={handleRetry}
+                      className="mt-1 flex items-center gap-1.5 rounded-lg bg-keyOp px-4 py-2 text-[12px] font-semibold text-black hover:bg-keyOpHover"
+                    >
+                      <RefreshCw size={14} />
+                      重新加载
+                    </button>
+                  </div>
+                ) : (
+                  <iframe
+                    key={reloadKey}
+                    src={doc.url}
+                    onLoad={handleIframeLoad}
+                    title={doc.title}
+                    className="h-full w-full border-0 bg-white"
+                    // 允许同源访问以便复制选中文本;禁止外部跳转
+                    sandbox="allow-same-origin allow-popups"
+                  />
+                )}
               </div>
             </>
           )}
