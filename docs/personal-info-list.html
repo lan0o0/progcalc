@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="程序员计算器 个人信息收集清单">
+<title>个人信息收集清单 · 程序员计算器</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: #1d1d1f;
+    background: #f5f5f7;
+    padding: calc(env(safe-area-inset-top, 0px) + 16px) 16px calc(env(safe-area-inset-bottom, 0px) + 32px);
+  }
+  .wrap { max-width: 680px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 24px 20px; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+  h1 { font-size: 22px; margin: 0 0 4px; text-align: center; }
+  .meta { text-align: center; font-size: 12px; color: #86868b; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #f0f0f2; }
+  .intro { font-size: 14px; color: #515154; background: #f5f5f7; border-radius: 8px; padding: 12px 14px; margin-bottom: 20px; }
+  h2 { font-size: 17px; margin: 24px 0 10px; padding-left: 10px; border-left: 3px solid #4A90D9; }
+  p { margin: 8px 0; font-size: 15px; color: #2c2c2e; }
+  ul { margin: 8px 0; padding-left: 22px; }
+  li { margin: 6px 0; font-size: 15px; color: #2c2c2e; }
+  .footer { margin-top: 28px; padding-top: 16px; border-top: 1px solid #f0f0f2; font-size: 12px; color: #86868b; text-align: center; }
+  a { color: #4A90D9; text-decoration: none; }
+  .copy { -webkit-user-select: text; user-select: text; }
+</style>
+</head>
+<body>
+<div class="wrap copy">
+  <h1>个人信息收集清单</h1>
+  <div class="meta">版本 v1.0.0 · 更新于 2026-08-07</div>
+
+  <p class="intro">依据《个人信息保护法》《App 违法违规收集使用个人信息行为认定方法》等规定，本清单如实披露「程序员计算器」对个人信息的收集情况。</p>
+
+  <h2>一、个人信息收集情况</h2>
+  <p>本应用不收集任何个人信息。具体而言：</p>
+  <ul>
+    <li>不收集用户身份信息（姓名、手机号、身份证号、邮箱等）；</li>
+    <li>不收集设备标识信息（IMEI、OAID、IDFA、MAC、Android ID、序列号等）；</li>
+    <li>不收集位置信息（GPS、基站、Wi-Fi 列表等）；</li>
+    <li>不收集通讯录、短信、通话记录；</li>
+    <li>不收集相册、相机、麦克风数据；</li>
+    <li>不收集应用使用行为（点击、停留时长、操作路径等）；</li>
+    <li>不收集剪贴板内容；</li>
+    <li>不收集传感器数据（加速度、陀螺仪等）。</li>
+  </ul>
+
+  <h2>二、本地存储说明</h2>
+  <p>本应用仅在浏览器/WebView 的 localStorage 中写入以下数据：</p>
+  <ul>
+    <li>键名：progcalc.agreement.accepted，值：true，用途：记录用户已同意用户协议与隐私政策，避免重复弹窗。不包含任何个人信息，可通过清除应用数据删除。</li>
+  </ul>
+
+  <h2>三、第三方 SDK 清单</h2>
+  <p>本应用未集成任何会收集用户个人信息的第三方 SDK。所使用的开源框架（React、Vite、Capacitor、TailwindCSS、zustand、lucide-react、react-router-dom 等）均为开发与渲染基础设施，不在运行时主动收集或上传用户个人信息。</p>
+
+  <h2>四、数据传输说明</h2>
+  <p>本应用不向任何服务器传输数据。应用不申请网络权限，亦不发起任何网络请求。</p>
+
+  <h2>五、用户权利</h2>
+  <p>由于本应用不收集您的个人信息，因此无需进行信息删除、更正、导出等操作。若您希望清除本地存储的协议同意标记，可在系统设置中执行「清除应用数据」或直接卸载应用。</p>
+
+  <h2>六、咨询与投诉</h2>
+  <p>如对本清单有任何疑问，可通过以下方式联系：</p>
+  <p>邮箱：<a href="mailto:lan0o0@qq.com">lan0o0@qq.com</a></p>
+
+  <div class="footer">
+    © 2026 郑州格一网络科技有限公司 · 程序员计算器
+  </div>
+</div>
+</body>
+</html>
