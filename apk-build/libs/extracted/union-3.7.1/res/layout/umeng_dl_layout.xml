@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/umeng_dl_bg_shape"
+    android:fitsSystemWindows="true">
+
+    <RelativeLayout
+        android:id="@+id/um_dl_web_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/um_dl_web_ib_back"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:gravity="center"
+            android:padding="8dp"
+            android:src="@drawable/umeng_union_lp_back"
+            tools:ignore="ContentDescription" />
+
+        <View
+            android:id="@+id/um_dl_web_divider"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_below="@id/um_dl_web_ib_back"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
+            android:background="#1F898C91" />
+
+        <View
+            android:id="@+id/um_dl_btm"
+            android:layout_width="match_parent"
+            android:layout_height="10dp"
+            android:layout_alignParentBottom="true"
+            android:background="#FFFEFFFF" />
+
+        <WebView
+            android:id="@+id/um_dl_web_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_above="@id/um_dl_btm"
+            android:layout_below="@id/um_dl_web_divider" />
+    </RelativeLayout>
+
+    <FrameLayout
+        android:id="@+id/um_dl_app"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="visible">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="8dp">
+
+            <ImageView
+                android:id="@+id/um_dl_iv_app_icon"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:layout_alignParentTop="true"
+                android:layout_centerHorizontal="true"
+                tools:ignore="ContentDescription"
+                tools:src="@android:drawable/ic_menu_call" />
+
+            <TextView
+                android:id="@+id/um_dl_tv_app_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/um_dl_iv_app_icon"
+                android:layout_centerHorizontal="true"
+                android:layout_marginTop="8dp"
+                android:maxLines="1"
+                android:singleLine="true"
+                android:textColor="#FF161924"
+                android:textSize="20dp"
+                android:textStyle="bold"
+                tools:text="应用名称" />
+
+            <LinearLayout
+                android:id="@+id/um_dl_app_perms_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:layout_centerHorizontal="true"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/um_dl_tv_app_perms"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/umeng_dl_app_permissions"
+                        android:textColor="#FF2196F3"
+                        android:textSize="14dp" />
+
+                    <View
+                        android:id="@+id/um_dl_divider"
+                        android:layout_width="1px"
+                        android:layout_height="12dp"
+                        android:layout_gravity="center_vertical"
+                        android:layout_marginLeft="22dp"
+                        android:layout_marginRight="22dp"
+                        android:background="#FF898C91" />
+
+                    <TextView
+                        android:id="@+id/um_dl_tv_app_privacy"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/umeng_dl_app_privacy"
+                        android:textColor="#FF2196F3"
+                        android:textSize="14dp" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/um_dl_btn_action"
+                    style="?android:attr/borderlessButtonStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginLeft="40dp"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginRight="40dp"
+                    android:background="@drawable/umeng_dl_btn_bg"
+                    android:text="@string/umeng_dl_start"
+                    android:textColor="#FFFCFEFE"
+                    android:textSize="18dp" />
+            </LinearLayout>
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_above="@id/um_dl_app_perms_layout"
+                android:layout_below="@id/um_dl_tv_app_name"
+                android:layout_centerInParent="true">
+
+                <ScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_horizontal"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/um_dl_tv_app_detail"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp"
+                            android:gravity="center_horizontal"
+                            android:ellipsize="end"
+                            android:maxLines="2"
+                            android:singleLine="false"
+                            android:textColor="#7F161924"
+                            android:textSize="14dp"
+                            tools:text="应用介绍\n应用介绍" />
+
+                        <TextView
+                            android:id="@+id/um_dl_tv_app_version"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:maxLines="1"
+                            android:textColor="#7F161924"
+                            android:textSize="14dp"
+                            tools:text="1.0.0" />
+
+                        <TextView
+                            android:id="@+id/um_dl_tv_app_time"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:maxLines="1"
+                            android:textColor="#7F161924"
+                            android:textSize="14dp"
+                            tools:text="xxxx.xx.xx" />
+
+                        <TextView
+                            android:id="@+id/um_dl_tv_app_owner"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:maxLines="1"
+                            android:textColor="#7F161924"
+                            android:textSize="14dp"
+                            tools:text="开发者：xxx" />
+                    </LinearLayout>
+                </ScrollView>
+
+            </FrameLayout>
+
+        </RelativeLayout>
+
+        <ImageView
+            android:id="@+id/um_dl_btn_close"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="right|top|end"
+            android:layout_marginTop="12dp"
+            android:layout_marginEnd="12dp"
+            android:layout_marginRight="12dp"
+            android:background="@drawable/umeng_union_lp_close"
+            tools:ignore="ContentDescription,RtlHardcoded" />
+    </FrameLayout>
+</FrameLayout>

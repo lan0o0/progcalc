@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/um_interstitial_content"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_gravity="center"
+    android:background="#0000"
+    android:orientation="vertical">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:clickable="true"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        android:paddingTop="24dp"
+        android:paddingBottom="12dp">
+
+        <ImageView
+            android:id="@+id/um_interstitial_iv_close"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="end|top"
+            android:paddingStart="4dp"
+            android:paddingLeft="4dp"
+            android:paddingTop="4dp"
+            android:src="@drawable/umeng_union_close2"
+            tools:ignore="ContentDescription,RtlSymmetry" />
+    </FrameLayout>
+
+    <FrameLayout
+        android:id="@+id/um_interstitial_frame"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#08ffffff">
+
+        <ImageView
+            android:id="@+id/um_interstitial_mark"
+            android:layout_width="22dp"
+            android:layout_height="10dp"
+            android:layout_gravity="bottom|start"
+            android:layout_marginStart="4dp"
+            android:layout_marginLeft="4dp"
+            android:layout_marginBottom="4dp"
+            android:scaleType="fitXY"
+            android:src="@drawable/umeng_union_splash_mark"
+            tools:ignore="ContentDescription" />
+        
+        <ImageView
+            android:id="@+id/um_interstitial_shake"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:layout_gravity="center|bottom"
+            android:layout_marginBottom="50dp"
+            android:scaleType="fitXY"
+            android:visibility="gone"
+            android:src="@drawable/umeng_union_splash_shake"
+            tools:ignore="ContentDescription" />
+    </FrameLayout>
+
+    <RelativeLayout
+        android:id="@+id/um_interstitial_bottom"
+        android:layout_width="match_parent"
+        android:layout_height="72dp"
+        android:background="#fff"
+        android:gravity="center_vertical"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp">
+
+        <TextView
+            android:id="@+id/um_interstitial_btn_detail"
+            android:layout_width="72dp"
+            android:layout_height="28dp"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:enabled="false"
+            android:background="@drawable/umeng_btn_blue"
+            android:clickable="false"
+            android:focusable="false"
+            android:gravity="center"
+            android:text="@string/umeng_btn_detail"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginEnd="4dp"
+            android:layout_marginRight="4dp"
+            android:layout_toStartOf="@id/um_interstitial_btn_detail"
+            android:layout_toLeftOf="@id/um_interstitial_btn_detail"
+            android:gravity="center_vertical"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                tools:ignore="UseCompoundDrawables">
+
+                <ImageView
+                    android:id="@+id/um_interstitial_iv_logo"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:paddingEnd="4dp"
+                    android:paddingRight="4dp"
+                    android:scaleType="fitXY"
+                    android:visibility="gone"
+                    tools:ignore="ContentDescription,RtlSymmetry"
+                    tools:src="@drawable/umeng_union_sound_on" />
+
+                <TextView
+                    android:id="@+id/um_interstitial_tv_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:singleLine="true"
+                    android:visibility="gone"
+                    android:textColor="#252934"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    tools:text="Title" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/um_interstitial_tv_content"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:maxLines="1"
+                android:singleLine="true"
+                android:visibility="gone"
+                android:textColor="#252934"
+                android:textSize="12sp"
+                tools:text="Content" />
+        </LinearLayout>
+    </RelativeLayout>
+</LinearLayout>

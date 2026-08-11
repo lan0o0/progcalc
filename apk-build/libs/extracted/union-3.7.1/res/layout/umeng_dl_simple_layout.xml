@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/um_dl_app"
+    android:layout_width="match_parent"
+    android:layout_height="280dp"
+    android:background="@drawable/umeng_dl_bg_shape"
+    android:fitsSystemWindows="true">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="36dp"
+        android:paddingBottom="36dp">
+
+        <Button
+            android:id="@+id/um_dl_btn_action"
+            style="?android:attr/borderlessButtonStyle"
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:layout_alignParentBottom="true"
+            android:layout_marginLeft="37dp"
+            android:layout_marginRight="37dp"
+            android:background="@drawable/umeng_dl_btn_bg"
+            android:text="@string/umeng_dl_start"
+            android:textColor="#FFFCFEFE"
+            android:textSize="18sp" />
+
+        <TextView
+            android:id="@+id/um_dl_tv_app_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_marginBottom="24dp"
+            android:gravity="center"
+            android:textColor="#FF161924"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/um_dl_tv_app_owner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_above="@id/um_dl_btn_action"
+            android:layout_below="@id/um_dl_tv_app_name"
+            android:gravity="center"
+            android:textColor="#7F161924"
+            android:textSize="14sp" />
+    </RelativeLayout>
+
+    <ImageView
+        android:id="@+id/um_dl_btn_close"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|right|end"
+        android:layout_marginTop="24dp"
+        android:layout_marginEnd="24dp"
+        android:layout_marginRight="24dp"
+        android:background="@drawable/umeng_union_lp_close"
+        tools:ignore="ContentDescription,RtlHardcoded" />
+</FrameLayout>

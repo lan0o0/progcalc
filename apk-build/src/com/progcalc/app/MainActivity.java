@@ -108,8 +108,24 @@ public class MainActivity extends Activity {
         splashAdContainer.setBackgroundColor(Color.BLACK);
         root.addView(splashAdContainer);
 
-        // 加载开屏广告:SDK 未接入/失败/超时都会回调 onSkip → goHome
-        UMAdSDK.loadSplashAd(this, splashAdContainer, new SplashCallback(this));
+        // === 合规延迟初始化(友盟官方要求) ===
+        // 1. preInit:预初始化,仅做准备不采集数据,可在用户同意前调用
+        UMAdSDK.preInit(this);
+
+        // 2. 检查用户是否已同意协议(SharedPreferences 持久化)
+        //    - 已同意 → init + 加载开屏广告(本次启动展示广告)
+        //    - 未同意 → 跳过广告,等前端通知同意后再 init(本次启动不展示广告)
+        boolean agreed = AgreementState.isChecked(this);
+        if (agreed) {
+            // 用户已同意,正式初始化 SDK 并加载开屏广告
+            UMAdSDK.init(this);
+            UMAdSDK.loadSplashAd(this, splashAdContainer, new SplashCallback(this));
+        } else {
+            // 首次启动/未同意:跳过开屏广告,直接进入主程序
+            // 前端协议门会展示,用户同意后通过 appNative.onAgreementAccepted() 通知原生
+            Log.d(TAG, "user not agreed yet, skip splash ad");
+            goHome();
+        }
 
         // 关键修复:等 layout pass 完成再加载 URL,避免 WebView 还没 attach 就 load
         // 这是 Vivo / Android 16 上黑屏的根因
@@ -128,10 +144,15 @@ public class MainActivity extends Activity {
 
     /**
      * 加载浮窗广告(幂等,仅加载一次)。
-     * 由 WebView onPageFinished 触发,SDK 未接入时静默返回。
+     * 由 WebView onPageFinished 或用户同意协议后触发。
+     * SDK 未初始化时静默返回,不设置标记,等 SDK 初始化后可再次调用。
      */
     void loadFloatingAdOnce() {
         if (floatingAdLoaded) return;
+        if (!UMAdSDK.isInited()) {
+            Log.d(TAG, "floating: SDK not inited yet, defer");
+            return;
+        }
         floatingAdLoaded = true;
         UMAdSDK.loadFloatingBannerAd(this);
     }
@@ -289,7 +310,12 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * JS 桥:前端通过 appNative.exit() 退出应用、appNative.getSystemTheme() 读取系统主题。
+     * JS 桥:前端通过 appNative 调用原生能力。
+     * - exit():退出应用
+     * - getSystemTheme():读取系统深浅色主题
+     * - isAgreementAccepted():查询协议同意状态(原生 SharedPreferences)
+     * - onAgreementAccepted():用户同意协议后通知原生初始化广告 SDK + 加载浮窗广告
+     *
      * 注意:@JavascriptInterface 方法运行在 WebView 私有线程,不能直接操作 UI。
      */
     static class AppBridge {
@@ -312,6 +338,43 @@ public class MainActivity extends Activity {
             int uiMode = activity.getResources().getConfiguration().uiMode
                     & Configuration.UI_MODE_NIGHT_MASK;
             return (uiMode == Configuration.UI_MODE_NIGHT_YES) ? "dark" : "light";
+        }
+
+        /**
+         * 查询用户是否已同意协议(原生 SharedPreferences)。
+         * 前端启动时调用此方法,与 localStorage 双向同步。
+         */
+        @JavascriptInterface
+        public boolean isAgreementAccepted() {
+            return AgreementState.isChecked(activity);
+        }
+
+        /**
+         * 用户同意协议后调用。
+         * 1. 持久化同意状态到 SharedPreferences(下次启动直接初始化 SDK + 开屏广告)
+         * 2. 正式初始化友盟 SDK(submitPolicyGrantResult + UMUnionSdk.init)
+         * 3. 加载浮窗广告(本次启动已错过开屏,下次启动才展示)
+         */
+        @JavascriptInterface
+        public void onAgreementAccepted() {
+            Log.i(TAG, "user agreed, initializing ad SDK");
+            // 1. 持久化同意状态
+            AgreementState.setAccepted(activity);
+            // 2. 正式初始化 SDK + 加载浮窗广告(在 UI 线程执行)
+            activity.runOnUiThread(new InitAdRunnable(activity));
+        }
+    }
+
+    /** 命名 Runnable:在 UI 线程初始化 SDK + 加载浮窗广告 */
+    static class InitAdRunnable implements Runnable {
+        private final MainActivity activity;
+        InitAdRunnable(MainActivity activity) { this.activity = activity; }
+        @Override
+        public void run() {
+            // 正式初始化友盟 SDK(合规:用户已同意)
+            UMAdSDK.init(activity);
+            // 加载浮窗广告(本次启动已错过开屏,下次启动才展示开屏)
+            activity.loadFloatingAdOnce();
         }
     }
 

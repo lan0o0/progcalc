@@ -34,7 +34,7 @@ export interface LegalDocument {
 export const APP_INFO = {
   name: "程序员计算器",
   appNameEn: "Programmer Calculator",
-  version: "2.11.3",
+  version: "2.11.4",
   developer: "郑州格一网络科技有限公司",
   contactEmail: "lan0o0@qq.com",
   updateDate: "2026-08-11",
@@ -117,9 +117,10 @@ export const PRIVACY_POLICY: LegalDocument = {
       heading: "一、我们收集哪些信息",
       paragraphs: [
         "本应用的核心计算功能(进制转换、位运算、机器码展示等)完全在本地完成,不要求用户注册或登录,不收集您的姓名、手机号、邮箱、通讯录、相册、短信、通话记录等个人身份信息。",
-        "为提供广告服务,本应用集成了第三方广告 SDK(UMUnionSdk),在应用启动时展示开屏广告、在主界面展示浮窗广告。该 SDK 在加载广告素材过程中会收集设备信息用于广告投放、反作弊与频率控制,具体包括:设备标识(OAID / Android ID / IMEI)、网络信息(IP 地址、网络类型)、设备型号、操作系统版本、屏幕尺寸、位置信息(粗略/精确,用于地域定向)、应用使用信息(广告展示/点击事件)。",
-        "上述设备信息由广告 SDK 直接采集并回传至广告服务方,本应用开发者不接触、不存储、不中转上述数据。",
-        "为记录您已同意本协议,本应用会在浏览器/WebView 的本地存储(localStorage)中写入一个布尔标记(键名:progcalc.agreement.accepted,值:true)。该标记不包含任何个人信息,仅用于避免重复弹窗,且可被您随时通过清除应用数据删除。",
+        "为提供广告服务,本应用集成了友盟SDK,在应用启动时展示开屏广告、在主界面展示浮窗广告。该 SDK 在用户同意《隐私权政策》后初始化,加载广告素材过程中会收集设备信息用于广告投放、反作弊与频率控制。",
+        "友盟SDK 收集的个人信息类型包括:设备信息(Android ID / IDFA / IDFV / OAID / OpenUDID / GUID;可选 IMEI / IMSI / ICCID)、网络信息、位置信息(可选)、应用列表(可选)。",
+        "上述设备信息由友盟SDK 直接采集并回传至友盟服务器,本应用开发者不接触、不存储、不中转上述数据。友盟SDK 隐私权政策链接:https://www.umeng.com/page/policy。",
+        "为记录您已同意本协议,本应用会在浏览器/WebView 的本地存储(localStorage)与原生 SharedPreferences 中写入同意标记。该标记不包含任何个人信息,仅用于避免重复弹窗与合规延迟初始化,且可被您随时通过清除应用数据删除。",
       ],
     },
     {
@@ -148,14 +149,17 @@ export const PRIVACY_POLICY: LegalDocument = {
     {
       heading: "四、第三方广告 SDK 说明",
       paragraphs: [
-        "本应用集成了 UMUnionSdk(广告联盟 SDK),用于在应用启动时展示开屏广告、在主界面展示浮窗广告,以维持应用的免费运营。",
-        "SDK 名称:UMUnionSdk(优目广告联盟 SDK)。",
-        "SDK 提供方:由 SDK 厂商独立运营,本应用仅作为接入方。",
-        "收集信息类型:设备标识(OAID / Android ID / IMEI)、IP 地址、网络类型、设备型号、操作系统版本、屏幕分辨率、位置信息(粗略/精确)、广告展示/点击事件等。",
+        "本应用集成了友盟SDK(包含基础组件库 common、asms 与广告联盟 union 模块),用于在应用启动时展示开屏广告、在主界面展示浮窗广告,以维持应用的免费运营。",
+        "SDK 名称:友盟SDK。",
+        "SDK 提供方:友盟+(北京宏景北雁信息技术有限公司)。",
+        "服务类型:广告联盟(开屏广告、浮窗广告)。",
+        "收集个人信息类型:设备信息(Android ID / IDFA / IDFV / OAID / OpenUDID / GUID;可选 IMEI / IMSI / ICCID)、网络信息、位置(可选)、应用列表(可选)。",
         "收集目的:广告投放与定向、反作弊、广告效果统计。",
-        "数据回传:SDK 直接将上述数据回传至广告服务方服务器,本应用开发者不接触、不存储、不中转这些数据。",
+        "数据回传:SDK 直接将上述数据回传至友盟服务器,本应用开发者不接触、不存储、不中转这些数据。",
+        "友盟SDK 隐私权政策链接:https://www.umeng.com/page/policy。",
         "权限使用:INTERNET(网络加载广告素材)、ACCESS_NETWORK_STATE(检测网络状态)、READ_PHONE_STATE(读取设备标识用于广告投放与反作弊)、ACCESS_COARSE_LOCATION / ACCESS_FINE_LOCATION(位置定向广告,可在系统设置中关闭)、AD_ID(广告标识符)。",
-        "如您不希望被广告 SDK 收集设备信息,可在系统设置中关闭对应权限,或卸载本应用。",
+        "合规延迟初始化:本应用严格遵守友盟合规要求,在用户同意《隐私权政策》后才调用 UMConfigure.submitPolicyGrantResult + UMUnionSdk.init 初始化 SDK,不会在用户同意前采集任何数据。",
+        "如您不希望被友盟SDK 收集设备信息,可在系统设置中关闭对应权限,或卸载本应用。",
       ],
     },
     {
@@ -237,15 +241,14 @@ export const PERSONAL_INFO_LIST: LegalDocument = {
     {
       heading: "二、第三方广告 SDK 收集情况",
       paragraphs: [
-        "本应用集成了 UMUnionSdk(广告联盟 SDK)用于广告变现。SDK 在加载广告素材时会收集以下设备信息,用于广告投放、反作弊与效果统计:",
+        "本应用集成了友盟SDK 用于广告变现。SDK 在用户同意《隐私权政策》后初始化,加载广告素材时会收集以下设备信息,用于广告投放、反作弊与效果统计:",
       ],
       list: [
-        "设备标识:OAID / Android ID / IMEI(用于广告归因与反作弊);",
-        "网络信息:IP 地址、网络类型(Wi-Fi/移动数据,用于广告加载策略);",
-        "设备信息:设备型号、操作系统版本、屏幕分辨率、运营商信息;",
-        "位置信息:粗略位置 / 精确位置(用于地域定向广告,可在系统设置中关闭);",
-        "广告交互事件:广告展示、点击、关闭事件(用于广告效果统计与计费);",
-        "应用信息:应用包名、版本号(用于广告填充控制)。",
+        "设备信息:Android ID / IDFA / IDFV / OAID / OpenUDID / GUID(用于广告归因与反作弊);可选 IMEI / IMSI / ICCID;",
+        "网络信息:IP 地址、网络类型(用于广告加载策略);",
+        "位置信息(可选):粗略位置 / 精确位置(用于地域定向广告,可在系统设置中关闭);",
+        "应用列表(可选):已安装应用列表(用于广告定向);",
+        "广告交互事件:广告展示、点击、关闭事件(用于广告效果统计与计费)。",
       ],
     },
     {
@@ -254,22 +257,26 @@ export const PERSONAL_INFO_LIST: LegalDocument = {
         "本应用集成的会收集用户个人信息的第三方 SDK 如下:",
       ],
       list: [
-        "SDK 名称:UMUnionSdk(优目广告联盟 SDK)。",
-        "提供方:SDK 厂商独立运营,本应用仅作为接入方。",
-        "收集信息:设备标识(OAID/Android ID/IMEI)、IP 地址、网络类型、设备型号、操作系统版本、屏幕分辨率、位置信息、广告交互事件。",
+        "SDK 名称:友盟SDK。",
+        "提供方:友盟+(北京宏景北雁信息技术有限公司)。",
+        "服务类型:广告联盟(开屏广告、浮窗广告)。",
+        "收集信息:设备信息(Android ID/IDFA/IDFV/OAID/OpenUDID/GUID;可选 IMEI/IMSI/ICCID)、网络信息、位置(可选)、应用列表(可选)。",
         "收集目的:广告投放与定向、广告填充与频次控制、反作弊与流量验证、广告效果统计。",
-        "数据回传:SDK 直接将数据回传至广告服务方服务器,本应用开发者不接触、不存储、不中转。",
+        "数据回传:SDK 直接将数据回传至友盟服务器,本应用开发者不接触、不存储、不中转。",
+        "隐私权政策:https://www.umeng.com/page/policy。",
         "申请权限:INTERNET、ACCESS_NETWORK_STATE、READ_PHONE_STATE、ACCESS_COARSE_LOCATION、ACCESS_FINE_LOCATION、AD_ID、WRITE_EXTERNAL_STORAGE(仅 Android 9 及以下)。",
+        "合规延迟初始化:用户同意《隐私权政策》后才初始化 SDK。",
       ],
     },
     {
       heading: "四、本地存储说明",
       paragraphs: [
-        "本应用自身仅在浏览器/WebView 的 localStorage 中写入以下数据:",
+        "本应用自身在以下位置写入非个人信息数据:",
       ],
       list: [
-        "键名:progcalc.agreement.accepted,值:true,用途:记录用户已同意用户协议与隐私政策,避免重复弹窗。不包含任何个人信息,可通过清除应用数据删除。",
-        "键名:progcalc.theme,值:auto/light/dark,用途:记录用户选择的主题模式。不包含个人信息,可通过清除应用数据删除。",
+        "localStorage 键名:progcalc.agreement.accepted,值:true,用途:记录用户已同意用户协议与隐私政策,避免重复弹窗。不包含任何个人信息,可通过清除应用数据删除。",
+        "localStorage 键名:progcalc.theme,值:auto/light/dark,用途:记录用户选择的主题模式。不包含个人信息,可通过清除应用数据删除。",
+        "SharedPreferences 键名:progcalc / agreement.accepted,值:true,用途:原生层记录用户已同意协议,用于合规延迟初始化广告 SDK。不包含个人信息,可通过清除应用数据删除。",
       ],
     },
     {

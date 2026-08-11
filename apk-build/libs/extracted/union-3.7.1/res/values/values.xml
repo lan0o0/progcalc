@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="umeng_fi_bottom_margin">56dp</dimen>
+    <dimen name="umeng_fi_drag_edge_bottom">12dp</dimen>
+    <dimen name="umeng_fi_drag_edge_lr">4dp</dimen>
+    <dimen name="umeng_fi_drag_edge_top">24dp</dimen>
+    <string name="umeng_ad_info_click_open">点击打开</string>
+    <string name="umeng_ad_reward_btn_cancel">放弃奖励</string>
+    <string name="umeng_ad_reward_btn_go">去体验</string>
+    <string name="umeng_ad_reward_btn_go_again">再次去体验</string>
+    <string name="umeng_ad_reward_btn_ok">领取奖励</string>
+    <string name="umeng_ad_reward_btn_play_again">继续观看</string>
+    <string name="umeng_ad_reward_error_tips">奖励领取失败，请稍后重试~</string>
+    <string name="umeng_ad_reward_task_not_finish">您还没有完成任务</string>
+    <string name="umeng_ad_reward_video_not_finish">再观看%d秒，即可领取奖励</string>
+    <string name="umeng_btn_detail">查看详情</string>
+    <string name="umeng_dl_app_desc">产品功能：%s</string>
+    <string name="umeng_dl_app_dev">开发者：%s</string>
+    <string name="umeng_dl_app_permissions">应用权限</string>
+    <string name="umeng_dl_app_privacy">隐私协议</string>
+    <string name="umeng_dl_app_time">更新时间：%s</string>
+    <string name="umeng_dl_app_ver">版本号：%s</string>
+    <string name="umeng_dl_cancel">取消</string>
+    <string name="umeng_dl_dlt_msg">确认要删除%s的下载任务吗？</string>
+    <string name="umeng_dl_dlt_tips">提示</string>
+    <string name="umeng_dl_done_tips">下载完成 点击安装</string>
+    <string name="umeng_dl_err_t">网络异常，下载失败</string>
+    <string name="umeng_dl_error_tips">下载失败 点击重试</string>
+    <string name="umeng_dl_ok">确定</string>
+    <string name="umeng_dl_pause_t">下载任务暂停</string>
+    <string name="umeng_dl_paused_tips">已暂停 </string>
+    <string name="umeng_dl_start">立即下载</string>
+    <string name="umeng_dl_start_c">正在下载中…</string>
+    <string name="umeng_dl_start_t">开始下载…</string>
+    <string name="umeng_dl_task_full">当前下载任务已满，请稍后重试</string>
+    <string name="umeng_reward_close_cd">关闭</string>
+    <string name="umeng_splash_skip_cd">跳过</string>
+</resources>

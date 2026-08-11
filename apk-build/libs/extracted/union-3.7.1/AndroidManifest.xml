@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.umeng.union" >
+
+    <uses-sdk android:minSdkVersion="14" />
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <application>
+        <provider
+            android:name="com.umeng.union.component.UMUnionProvider"
+            android:authorities="${applicationId}.umeng.union"
+            android:exported="false" />
+
+        <activity
+            android:name="com.umeng.union.component.UMUnionActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:screenOrientation="behind"
+            android:taskAffinity="${applicationId}.u_union"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <activity
+            android:name="com.umeng.union.component.UMWebViewActivity"
+            android:configChanges="orientation|screenSize|navigation|keyboardHidden"
+            android:exported="false"
+            android:screenOrientation="behind"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <activity
+            android:name="com.umeng.union.component.UMDownloadInfoActivity"
+            android:configChanges="orientation|screenSize|navigation|keyboardHidden"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:screenOrientation="behind"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <activity
+            android:name="com.umeng.union.component.UMDownloadNtfClickActivity"
+            android:configChanges="orientation|screenSize|navigation|keyboardHidden"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:screenOrientation="behind"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <receiver
+            android:name="com.umeng.union.component.UMUnionReceiver"
+            android:exported="false" />
+
+        <provider
+            android:name="com.umeng.union.component.UMUnionFileProvider"
+            android:authorities="${applicationId}.um_file_provider"
+            android:exported="false"
+            android:grantUriPermissions="true" >
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/umeng_file_paths" />
+        </provider>
+
+        <activity
+            android:name="com.umeng.union.component.UMRewardActivity"
+            android:configChanges="orientation|screenSize|navigation|keyboardHidden"
+            android:exported="false" />
+    </application>
+
+</manifest>

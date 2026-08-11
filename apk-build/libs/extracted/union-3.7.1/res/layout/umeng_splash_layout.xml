@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <FrameLayout
+        android:id="@+id/umeng_splash_content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <TextView
+        android:id="@+id/umeng_splash_countdown_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="right|end|top"
+        android:layout_marginTop="12dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginRight="12dp"
+        android:background="@drawable/umeng_splash_skip"
+        android:gravity="center"
+        android:paddingLeft="8dp"
+        android:paddingTop="4dp"
+        android:paddingRight="8dp"
+        android:paddingBottom="4dp"
+        android:textColor="#CFFF"
+        android:textSize="12dp"
+        android:visibility="gone"
+        tools:ignore="RtlHardcoded,SpUsage"
+        tools:text="@string/umeng_splash_skip_cd" />
+
+    <LinearLayout
+        android:id="@+id/umeng_splash_action_layout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="40dp"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ImageView
+            android:id="@+id/umeng_splash_shake"
+            android:layout_width="111dp"
+            android:layout_height="110dp"
+            android:layout_marginBottom="30dp"
+            android:scaleType="fitXY"
+            android:src="@drawable/umeng_union_splash_shake"
+            tools:ignore="ContentDescription" />
+
+        <ImageView
+            android:id="@+id/umeng_splash_action"
+            android:layout_width="273dp"
+            android:layout_height="52dp"
+            android:scaleType="fitXY"
+            android:src="@drawable/umeng_union_splash_action"
+            tools:ignore="ContentDescription" />
+    </LinearLayout>
+
+<!--    <ImageView-->
+<!--        android:id="@+id/umeng_splash_mark"-->
+<!--        android:layout_width="50dp"-->
+<!--        android:layout_height="24dp"-->
+<!--        android:layout_gravity="end|bottom"-->
+<!--        android:layout_marginEnd="12dp"-->
+<!--        android:layout_marginRight="12dp"-->
+<!--        android:layout_marginBottom="12dp"-->
+<!--        android:src="@drawable/umeng_union_splash_mark_new"-->
+<!--        tools:ignore="ContentDescription" />-->
+
+    <ImageView
+        android:id="@+id/umeng_splash_mark"
+        android:layout_width="22dp"
+        android:layout_height="10dp"
+        android:layout_gravity="end|bottom"
+        android:layout_marginEnd="12dp"
+        android:layout_marginRight="12dp"
+        android:layout_marginBottom="12dp"
+        android:src="@drawable/umeng_union_splash_mark"
+        tools:ignore="ContentDescription" />
+</FrameLayout>

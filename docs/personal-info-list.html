@@ -55,7 +55,7 @@
 <body>
 <div class="wrap copy">
   <h1>个人信息收集清单</h1>
-  <div class="meta">版本 v2.11.3 · 生效于 2026-08-11 · 更新于 2026-08-11</div>
+  <div class="meta">版本 v2.11.4 · 生效于 2026-08-11 · 更新于 2026-08-11</div>
 
   <p class="intro">依据《个人信息保护法》《App 违法违规收集使用个人信息行为认定方法》等规定，本清单如实披露「程序员计算器」对个人信息的收集情况。</p>
 
@@ -72,25 +72,27 @@
   </ul>
 
   <h2>二、第三方广告 SDK 收集情况</h2>
-  <p>本应用集成了 UMUnionSdk（广告联盟 SDK）用于广告变现。SDK 在加载广告素材时会收集以下设备信息，用于广告投放、反作弊与效果统计：</p>
+  <p>本应用集成了友盟SDK 用于广告变现。SDK 在用户同意《隐私权政策》后初始化，加载广告素材时会收集以下设备信息，用于广告投放、反作弊与效果统计：</p>
   <ul>
-    <li>设备标识：OAID / Android ID / IMEI（用于广告归因与反作弊）；</li>
-    <li>网络信息：IP 地址、网络类型（Wi-Fi/移动数据，用于广告加载策略）；</li>
-    <li>设备信息：设备型号、操作系统版本、屏幕分辨率、运营商信息；</li>
-    <li>位置信息：粗略位置 / 精确位置（用于地域定向广告，可在系统设置中关闭）；</li>
-    <li>广告交互事件：广告展示、点击、关闭事件（用于广告效果统计与计费）；</li>
-    <li>应用信息：应用包名、版本号（用于广告填充控制）。</li>
+    <li>设备信息：Android ID / IDFA / IDFV / OAID / OpenUDID / GUID（用于广告归因与反作弊）；可选 IMEI / IMSI / ICCID；</li>
+    <li>网络信息：IP 地址、网络类型（用于广告加载策略）；</li>
+    <li>位置信息（可选）：粗略位置 / 精确位置（用于地域定向广告，可在系统设置中关闭）；</li>
+    <li>应用列表（可选）：已安装应用列表（用于广告定向）；</li>
+    <li>广告交互事件：广告展示、点击、关闭事件（用于广告效果统计与计费）。</li>
   </ul>
 
   <h2>三、第三方 SDK 清单</h2>
   <p>本应用集成的会收集用户个人信息的第三方 SDK 如下：</p>
   <ul>
-    <li>SDK 名称：UMUnionSdk（优目广告联盟 SDK）。</li>
-    <li>提供方：SDK 厂商独立运营，本应用仅作为接入方。</li>
-    <li>收集信息：设备标识（OAID/Android ID/IMEI）、IP 地址、网络类型、设备型号、操作系统版本、屏幕分辨率、位置信息、广告交互事件。</li>
+    <li>SDK 名称：友盟SDK。</li>
+    <li>提供方：友盟+（北京宏景北雁信息技术有限公司）。</li>
+    <li>服务类型：广告联盟（开屏广告、浮窗广告）。</li>
+    <li>收集信息：设备信息（Android ID/IDFA/IDFV/OAID/OpenUDID/GUID；可选 IMEI/IMSI/ICCID）、网络信息、位置（可选）、应用列表（可选）。</li>
     <li>收集目的：广告投放与定向、广告填充与频次控制、反作弊与流量验证、广告效果统计。</li>
-    <li>数据回传：SDK 直接将数据回传至广告服务方服务器，本应用开发者不接触、不存储、不中转。</li>
+    <li>数据回传：SDK 直接将数据回传至友盟服务器，本应用开发者不接触、不存储、不中转。</li>
+    <li>隐私权政策：<a href="https://www.umeng.com/page/policy">https://www.umeng.com/page/policy</a>。</li>
     <li>申请权限：INTERNET、ACCESS_NETWORK_STATE、READ_PHONE_STATE、ACCESS_COARSE_LOCATION、ACCESS_FINE_LOCATION、AD_ID、WRITE_EXTERNAL_STORAGE（仅 Android 9 及以下）。</li>
+    <li>合规延迟初始化：用户同意《隐私权政策》后才初始化 SDK。</li>
   </ul>
 
   <h2>四、本地存储说明</h2>

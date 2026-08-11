@@ -98,6 +98,28 @@ src/
 
 ## 更新日志
 
+### v2.11.4 — 2026-08-11
+
+- 🛡️ **友盟合规三步落地**(满足监管新规,避免未授权采集风险):
+  - ① SDK 已升级:common 9.9.6 + asms 1.8.7.2 + union 3.7.1
+  - ② 隐私政策 / 个人信息收集清单 已如实披露友盟 SDK 名称、收集信息类型、隐私政策链接
+  - ③ **延迟初始化**:用户同意《隐私权政策》后才调用 `UMConfigure.submitPolicyGrantResult` + `UMUnionSdk.init`
+- 🔧 **重构广告初始化为两阶段**([UMAdSDK.java](./apk-build/src/com/progcalc/app/UMAdSDK.java)):
+  - `preInit()` 可在用户同意前调用,仅做准备不采集数据
+  - `init()` 必须在用户同意后调用,触发真正初始化
+  - 首次启动跳过开屏广告,二次启动(已同意)展示开屏广告
+- 💾 **协议状态原生持久化**([AgreementState.java](./apk-build/src/com/progcalc/app/AgreementState.java)):
+  - 用 SharedPreferences 存储同意状态,下次启动直接初始化 SDK + 展示开屏广告
+  - 前端通过 `appNative.isAgreementAccepted()` 与原生双向同步
+- 🌉 **原生-JS 桥扩展**([MainActivity.java](./apk-build/src/com/progcalc/app/MainActivity.java)):
+  - 新增 `isAgreementAccepted()` / `onAgreementAccepted()` 两个 `@JavascriptInterface` 方法
+  - 用户在前端点「同意并继续」→ 通知原生 → UI 线程初始化 SDK + 加载浮窗广告
+- 📦 **构建脚本完善**([build.sh](./apk-build/build.sh)):
+  - 自动解压 libs/*.aar,提取 classes.jar 加入 javac/d8 classpath
+  - 自动打包 SDK 的 native .so 文件到 APK(libumeng-spy.so 多 ABI)
+- 📄 用户协议 / 隐私政策 / 个人信息收集清单 公网页面版本号对齐 v2.11.4
+- ⚠️ **待办**:[UMAdSDK.java](./apk-build/src/com/progcalc/app/UMAdSDK.java#L34-L41) 中 `UM_APP_KEY` / `SPLASH_SLOT_ID` / `FLOATING_SLOT_ID` 仍为占位符,需替换为友盟后台真实值才能展示广告
+
 ### v2.11.3 — 2026-08-11
 
 - 📢 **接入广告 SDK(UMUnionSdk)**:维持应用免费运营

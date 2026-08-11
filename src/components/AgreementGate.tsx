@@ -12,6 +12,15 @@ const AGREEMENT_KEY = "progcalc.agreement.accepted";
 
 /** 检查用户是否已同意协议(仅在客户端执行) */
 export function isAgreementAccepted(): boolean {
+  // 优先读原生 SharedPreferences(确保原生层与前端状态一致)
+  try {
+    const bridge = window.appNative;
+    if (bridge && typeof bridge.isAgreementAccepted === "function") {
+      return bridge.isAgreementAccepted();
+    }
+  } catch {
+    /* 忽略,回退 localStorage */
+  }
   try {
     return localStorage.getItem(AGREEMENT_KEY) === "true";
   } catch {
@@ -42,10 +51,21 @@ export default function AgreementGate({ onAgree }: Props) {
   const closeDoc = () => setModalOpen(false);
 
   const handleAgree = () => {
+    // 1. 写 localStorage(浏览器/PWA 环境需要)
     try {
       localStorage.setItem(AGREEMENT_KEY, "true");
     } catch {
       // 写入失败不阻塞使用
+    }
+    // 2. 通知原生层:用户已同意协议,初始化广告 SDK + 加载浮窗广告
+    //    原生层会把同意状态持久化到 SharedPreferences,下次启动直接初始化 SDK + 开屏广告
+    try {
+      const bridge = window.appNative;
+      if (bridge && typeof bridge.onAgreementAccepted === "function") {
+        bridge.onAgreementAccepted();
+      }
+    } catch {
+      /* 忽略 */
     }
     onAgree();
   };

@@ -1,0 +1,8 @@
+-dontwarn com.umeng.**
+-keep class com.umeng.** {*;}
+
+-keep public class **.R$* {
+    public static final int *;
+}
+
+-keep class * implements java.io.Serializable

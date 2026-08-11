@@ -1,0 +1,17 @@
+<!-- res/drawable/btn_background.xml -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 按下状态 -->
+    <item android:state_pressed="true">
+        <shape>
+            <solid android:color="#CD1E3D" /> <!-- 点击时颜色 -->
+            <corners android:radius="144dp" />
+        </shape>
+    </item>
+    <!-- 默认状态 -->
+    <item>
+        <shape>
+            <solid android:color="#FE3559" /> <!-- 默认颜色 -->
+            <corners android:radius="144dp" />
+        </shape>
+    </item>
+</selector>

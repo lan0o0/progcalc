@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/um_download_notification_rl"
+    android:layout_width="match_parent"
+    android:layout_height="60dp"
+    android:background="#FFEFF6FF"
+    android:paddingLeft="14dp"
+    android:paddingRight="14dp">
+
+    <ImageView
+        android:id="@+id/um_download_notification_iv"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentLeft="true"
+        android:layout_centerVertical="true"
+        android:src="@drawable/umeng_union_dl_icon"
+        tools:ignore="ContentDescription" />
+
+    <RelativeLayout
+        android:id="@+id/um_download_notification_btn_rl"
+        android:layout_width="34dp"
+        android:layout_height="match_parent"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true">
+
+        <ImageView
+            android:id="@+id/um_download_notification_btn"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            tools:ignore="ContentDescription" />
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:layout_marginStart="12dp"
+        android:layout_marginLeft="12dp"
+        android:layout_toStartOf="@id/um_download_notification_btn_rl"
+        android:layout_toLeftOf="@id/um_download_notification_btn_rl"
+        android:layout_toEndOf="@id/um_download_notification_iv"
+        android:layout_toRightOf="@id/um_download_notification_iv">
+
+        <TextView
+            android:id="@+id/um_download_notification_title"
+            android:layout_width="120dp"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentLeft="true"
+            android:layout_toEndOf="@+id/um_download_notification_pg_tv"
+            android:layout_toRightOf="@+id/um_download_notification_pg_tv"
+            android:ellipsize="marquee"
+            android:singleLine="true"
+            android:textColor="#FF252934"
+            android:textSize="14sp"
+            tools:text="App" />
+
+        <TextView
+            android:id="@+id/um_download_notification_pg_tv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignBottom="@id/um_download_notification_title"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentRight="true"
+            android:textColor="#7F252934"
+            android:textSize="10sp"
+            tools:ignore="RelativeOverlap,SmallSp" />
+
+        <ProgressBar
+            android:id="@+id/um_download_notification_pgbar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="2dp"
+            android:layout_below="@id/um_download_notification_title"
+            android:layout_marginTop="4dp"
+            android:progressDrawable="@drawable/umeng_ntf_pb" />
+
+    </RelativeLayout>
+
+</RelativeLayout>
