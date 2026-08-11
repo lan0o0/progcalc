@@ -371,10 +371,13 @@ public class MainActivity extends Activity {
         InitAdRunnable(MainActivity activity) { this.activity = activity; }
         @Override
         public void run() {
+            Log.d(TAG, "InitAdRunnable: start init SDK");
             // 正式初始化友盟 SDK(合规:用户已同意)
-            UMAdSDK.init(activity);
+            boolean ok = UMAdSDK.init(activity);
+            Log.d(TAG, "InitAdRunnable: init result=" + ok + ", inited=" + UMAdSDK.isInited());
             // 加载浮窗广告(本次启动已错过开屏,下次启动才展示开屏)
             activity.loadFloatingAdOnce();
+            Log.d(TAG, "InitAdRunnable: loadFloatingAdOnce done, floatingAdLoaded=" + activity.floatingAdLoaded);
         }
     }
 

@@ -16,15 +16,21 @@ export function isAgreementAccepted(): boolean {
   try {
     const bridge = window.appNative;
     if (bridge && typeof bridge.isAgreementAccepted === "function") {
-      return bridge.isAgreementAccepted();
+      const nativeResult = bridge.isAgreementAccepted();
+      console.log("[ProgCalc] isAgreementAccepted: native=" + nativeResult);
+      // 以原生为准,不同步 localStorage(避免 localStorage 残留导致状态不一致)
+      return nativeResult;
     }
-  } catch {
-    /* 忽略,回退 localStorage */
+    console.log("[ProgCalc] isAgreementAccepted: native bridge not available, fallback to localStorage");
+  } catch (e) {
+    console.log("[ProgCalc] isAgreementAccepted: native bridge error, fallback to localStorage: " + e);
   }
   try {
-    return localStorage.getItem(AGREEMENT_KEY) === "true";
+    const lsResult = localStorage.getItem(AGREEMENT_KEY) === "true";
+    console.log("[ProgCalc] isAgreementAccepted: localStorage=" + lsResult);
+    return lsResult;
   } catch {
-    // localStorage 不可用时(隐私模式/异常)默认放行,避免阻塞使用
+    console.log("[ProgCalc] isAgreementAccepted: localStorage not available");
     return false;
   }
 }
@@ -51,6 +57,7 @@ export default function AgreementGate({ onAgree }: Props) {
   const closeDoc = () => setModalOpen(false);
 
   const handleAgree = () => {
+    console.log("[ProgCalc] AgreementGate: user clicked agree");
     // 1. 写 localStorage(浏览器/PWA 环境需要)
     try {
       localStorage.setItem(AGREEMENT_KEY, "true");
@@ -62,10 +69,13 @@ export default function AgreementGate({ onAgree }: Props) {
     try {
       const bridge = window.appNative;
       if (bridge && typeof bridge.onAgreementAccepted === "function") {
+        console.log("[ProgCalc] AgreementGate: calling native onAgreementAccepted");
         bridge.onAgreementAccepted();
+      } else {
+        console.log("[ProgCalc] AgreementGate: native bridge not available");
       }
-    } catch {
-      /* 忽略 */
+    } catch (e) {
+      console.log("[ProgCalc] AgreementGate: native bridge error: " + e);
     }
     onAgree();
   };
