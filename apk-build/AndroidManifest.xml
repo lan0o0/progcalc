@@ -1,10 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.progcalc.app"
-    android:versionCode="24"
-    android:versionName="2.11.2">
+    android:versionCode="25"
+    android:versionName="2.11.3">
 
+    <!-- 基础网络权限(广告 SDK 加载素材需要) -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- 广告 SDK 常用权限:读取设备标识用于广告投放与反作弊 -->
+    <!-- 注意:Android 13+ 需运行时申请部分权限,本应用仅声明,SDK 内部按需申请 -->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- Android 13+ 广告 ID 权限(替代 OAID) -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
+    <!-- 外部存储(部分广告素材缓存,Android 10+ 通过 Scoped Storage 不再需要) -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
 
     <application
         android:allowBackup="true"

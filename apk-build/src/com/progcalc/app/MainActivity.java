@@ -6,6 +6,7 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.webkit.ConsoleMessage;
 import android.webkit.JsPromptResult;
@@ -27,6 +28,12 @@ public class MainActivity extends Activity {
     private int statusBarHeightPx = 0;
     private int navBarHeightPx = 0;
     private float density = 1f;
+    // 开屏广告容器:覆盖在 WebView 之上,广告关闭/跳过后移除
+    private FrameLayout splashAdContainer;
+    // 标记主程序是否已进入(防止开屏广告回调重复触发 goHome)
+    private volatile boolean homeEntered = false;
+    // 标记浮窗广告是否已加载(避免重复加载)
+    private volatile boolean floatingAdLoaded = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -93,12 +100,75 @@ public class MainActivity extends Activity {
         root.addView(webView);
         setContentView(root);
 
+        // 开屏广告容器:覆盖在 WebView 之上,fill 整屏
+        splashAdContainer = new FrameLayout(this);
+        splashAdContainer.setLayoutParams(new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT));
+        splashAdContainer.setBackgroundColor(Color.BLACK);
+        root.addView(splashAdContainer);
+
+        // 加载开屏广告:SDK 未接入/失败/超时都会回调 onSkip → goHome
+        UMAdSDK.loadSplashAd(this, splashAdContainer, new SplashCallback(this));
+
         // 关键修复:等 layout pass 完成再加载 URL,避免 WebView 还没 attach 就 load
         // 这是 Vivo / Android 16 上黑屏的根因
         webView.getViewTreeObserver().addOnGlobalLayoutListener(new LayoutReadyListener(this));
     }
 
-    /** 命名内部类:等 layout pass 完成后再加载 URL */
+    /**
+     * 进入主程序:移除开屏广告容器,加载 WebView URL。
+     * 幂等:多次调用只会真正执行一次。
+     */
+    void goHome() {
+        if (homeEntered) return;
+        homeEntered = true;
+        runOnUiThread(new GoHomeRunnable(this));
+    }
+
+    /**
+     * 加载浮窗广告(幂等,仅加载一次)。
+     * 由 WebView onPageFinished 触发,SDK 未接入时静默返回。
+     */
+    void loadFloatingAdOnce() {
+        if (floatingAdLoaded) return;
+        floatingAdLoaded = true;
+        UMAdSDK.loadFloatingBannerAd(this);
+    }
+
+    /** 命名 Runnable:在 UI 线程执行 goHome 主体(避免 Lambda 让 d8 崩溃) */
+    static class GoHomeRunnable implements Runnable {
+        private final MainActivity activity;
+        GoHomeRunnable(MainActivity activity) { this.activity = activity; }
+        @Override
+        public void run() {
+            // 移除开屏广告容器,露出 WebView
+            FrameLayout splash = activity.splashAdContainer;
+            if (splash != null && splash.getParent() != null) {
+                ((ViewGroup) splash.getParent()).removeView(splash);
+                activity.splashAdContainer = null;
+            }
+            // 确保 WebView 加载 URL
+            WebView w = activity.webView;
+            if (w != null && w.getTag() == null) {
+                w.setTag("loaded");
+                Log.d(TAG, "goHome: loading " + START_URL);
+                w.loadUrl(START_URL);
+            }
+        }
+    }
+
+    /** 命名内部类:开屏广告回调(避免匿名内部类让 d8 崩溃) */
+    static class SplashCallback implements UMAdSDK.SplashAdCallback {
+        private final MainActivity activity;
+        SplashCallback(MainActivity activity) { this.activity = activity; }
+        @Override public void onLoaded() { /* 素材已就绪,等 onExposed */ }
+        @Override public void onExposed() { /* 广告已展示,等 onDismissed */ }
+        @Override public void onDismissed() { activity.goHome(); }
+        @Override public void onSkip() { activity.goHome(); }
+    }
+
+    /** 命名内部类:等 layout pass 完成后进入主程序(与开屏广告回调共用 goHome) */
     static class LayoutReadyListener implements ViewTreeObserver.OnGlobalLayoutListener {
         private final MainActivity activity;
 
@@ -112,27 +182,12 @@ public class MainActivity extends Activity {
             if (w == null) return;
             if (w.getWidth() > 0 && w.getHeight() > 0) {
                 if (w.getTag() == null) {
-                    w.setTag("loaded");
-                    Log.d(TAG, "layout ready, loading " + START_URL);
                     w.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-                    w.post(new LoadUrlTask(activity));
+                    Log.d(TAG, "layout ready, goHome");
+                    // 如果开屏广告未触发 goHome(如 SDK 未接入直接 onSkip),
+                    // layout 就绪后兜底进入主程序;goHome 内部会判重
+                    activity.goHome();
                 }
-            }
-        }
-    }
-
-    /** 命名 Runnable:在 UI 线程加载 URL */
-    static class LoadUrlTask implements Runnable {
-        private final MainActivity activity;
-
-        LoadUrlTask(MainActivity activity) {
-            this.activity = activity;
-        }
-
-        @Override
-        public void run() {
-            if (activity.webView != null) {
-                activity.webView.loadUrl(START_URL);
             }
         }
     }
@@ -206,6 +261,10 @@ public class MainActivity extends Activity {
             String js = "document.documentElement.style.setProperty('--safe-top','" + topCss + "px');"
                     + "document.documentElement.style.setProperty('--safe-bottom','" + botCss + "px');";
             v.evaluateJavascript(js, null);
+
+            // 主页加载完成后加载浮窗广告(仅一次)
+            // SDK 未接入时 loadFloatingBannerAd 内部会静默返回
+            activity.loadFloatingAdOnce();
         }
     }
 
