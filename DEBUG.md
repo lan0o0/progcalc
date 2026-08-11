@@ -86,3 +86,33 @@ public String getSystemTheme() {
 3. 系统切换为浅色模式 → App 应实时切换为浅色主题(无需重启 App)
 4. 手动选择「深色」/「浅色」→ 应忽略系统设置,固定为所选主题
 5. 杀掉 App 重新打开 → 主题选择应持久化,「自动」模式应正确跟随当前系统主题
+
+## 补充修复:LegalModal iframe 主题同步
+
+### 问题
+
+验证设置页主题切换按钮时发现:手动切换「深色」/「浅色」按钮能正常同步 WebView 内容(通过 zustand store 订阅 + `useEffect([effectiveTheme])` 重载 iframe)。
+
+但「自动」模式下系统主题切换时,`LegalModal` 内的 iframe(用户协议/隐私政策)不会跟随更新:
+- `onSystemThemeChanged` 只调用 `applyThemeToDom("auto")` 更新 DOM
+- zustand store 的 `mode` 仍是 `"auto"` 未变化
+- 订阅 store 的 `LegalModal` 不重渲染,`effectiveTheme` 不重算,iframe 不重载
+
+### 修复
+
+在 `themeStore.ts` 的 `onSystemThemeChanged` 中,除 `applyThemeToDom` 外,额外 dispatch `progcalc:systemtheme` CustomEvent(携带 effective theme)。
+
+`LegalModal.tsx` 新增 `useEffect` 监听该事件,触发 `setReloadKey` 重载 iframe:
+
+```typescript
+useEffect(() => {
+  if (!open || !doc) return;
+  const handler = () => setReloadKey((k) => k + 1);
+  window.addEventListener("progcalc:systemtheme", handler);
+  return () => window.removeEventListener("progcalc:systemtheme", handler);
+}, [open, doc]);
+```
+
+两条路径覆盖:
+- 手动切换(深色/浅色按钮)→ store 订阅 → `effectiveTheme` 变化 → iframe 重载
+- 自动模式 + 系统切换 → CustomEvent → iframe 重载

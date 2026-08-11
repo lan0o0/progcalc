@@ -96,9 +96,19 @@ export function initTheme(): () => void {
   //    a) 原生桥(Android):onConfigurationChanged 触发时,原生通过
   //       evaluateJavascript 调用 window.__onNativeSystemThemeChange
   //    b) matchMedia(浏览器/PWA):监听 prefers-color-scheme 变化
+  //
+  // 系统主题变化时除了更新 DOM,还 dispatch 一个 CustomEvent,
+  // 让依赖 effectiveTheme 的组件(如 LegalModal 的 iframe)能感知到
+  // 并重新加载,因为此时 zustand store 的 mode 仍是 "auto" 未变,
+  // 订阅 store 的组件不会重渲染。
   const onSystemThemeChanged = () => {
     if (useThemeStore.getState().mode === "auto") {
-      applyThemeToDom("auto");
+      const effective = applyThemeToDom("auto");
+      window.dispatchEvent(
+        new CustomEvent<EffectiveTheme>("progcalc:systemtheme", {
+          detail: effective,
+        })
+      );
     }
   };
   // 挂载原生回调,供 Android 端 dispatchSystemThemeChanged() 调用

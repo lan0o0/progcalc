@@ -105,6 +105,7 @@ src/
 - ✅ 系统主题切换实时响应:`AndroidManifest` 增加 `configChanges="uiMode"`,`onConfigurationChanged` 通过 `evaluateJavascript` 通知前端 `window.__onNativeSystemThemeChange` 回调
 - ✅ 修复 Zustand persist 时序:`onRehydrateStorage` 在 localStorage 水合后重新应用主题,避免初始闪烁
 - ✅ `ExitBridge` 升级为 `AppBridge`,同时承担退出与主题查询职责
+- ✅ 修复「自动」模式下系统主题切换时 LegalModal iframe 不跟随更新:系统主题变化时 dispatch `progcalc:systemtheme` CustomEvent,LegalModal 监听后重载 iframe(手动切换深色/浅色按钮通过 store 订阅已正常工作)
 - 📝 新增 [DEBUG.md](./DEBUG.md) 记录本次排查过程
 
 ### v2.11.0 — 2026-08-07

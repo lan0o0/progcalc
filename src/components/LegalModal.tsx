@@ -47,12 +47,22 @@ export default function LegalModal({ open, doc, onClose }: Props) {
   }, [open, doc, reloadKey]);
 
   // 主题变化时重载 iframe 以应用新主题
+  // 1) 用户手动切换(深色/浅色按钮):store mode 变化 → effectiveTheme 变化
   useEffect(() => {
     if (open && doc) {
       setReloadKey((k) => k + 1);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveTheme]);
+
+  // 2) 自动模式下系统主题切换:store mode 仍是 "auto" 不变,
+  //    effectiveTheme 不会重算,需监听 themeStore dispatch 的 CustomEvent
+  useEffect(() => {
+    if (!open || !doc) return;
+    const handler = () => setReloadKey((k) => k + 1);
+    window.addEventListener("progcalc:systemtheme", handler);
+    return () => window.removeEventListener("progcalc:systemtheme", handler);
+  }, [open, doc]);
 
   const handleIframeLoad = () => {
     if (timerRef.current) window.clearTimeout(timerRef.current);
