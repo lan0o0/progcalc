@@ -343,6 +343,9 @@ public final class UMAdSDK {
                 // 5 秒后自动关闭(遍历 DecorView 移除友盟 View)
                 new Handler(Looper.getMainLooper()).postDelayed(
                         new FloatingAutoCloseRunnable(activity), FLOATING_AUTO_CLOSE_MS);
+                // 延迟 500ms 设置摇一摇阈值(广告 View 添加到 DecorView 后才能找到)
+                new Handler(Looper.getMainLooper()).postDelayed(
+                        new FloatingShakeRunnable(activity), 500L);
             } catch (Throwable t) {
                 Log.e(TAG, "floating: show failed", t);
             }
@@ -426,6 +429,112 @@ public final class UMAdSDK {
     }
 
     /**
+     * 设置广告摇一摇阈值(通过反射调用 SDK 内部 j0.a(float))。
+     *
+     * 友盟 SDK 默认阈值 20.0f(约 2g 加速度),需要较大幅度摇动才触发。
+     * 此方法遍历 DecorView 中的广告 View,通过反射查找 j0 实例并调用 a(float)
+     * 降低阈值,实现"稍微摇动就跳转广告"。
+     *
+     * 实现原理:
+     * - SDK 的 j0 类(internal 包,不对外暴露)实现 SensorEventListener
+     * - j0.a(float threshold) 方法设置震动阈值(限制 0 < threshold < 20.0f)
+     * - j0 实例被 H / V0 / p 等类持有,这些类实例是广告 View 的成员
+     * - 通过反射遍历广告 View 的字段树,找到 j0 实例后调用 a(float)
+     *
+     * @param activity Activity
+     * @param threshold 阈值(m/s²),建议 5~15,越小越敏感
+     * @return 是否成功设置
+     */
+    static boolean setShakeThreshold(Activity activity, float threshold) {
+        if (activity == null || activity.isFinishing() || activity.isDestroyed()) return false;
+        try {
+            Class<?> j0Class = Class.forName("com.umeng.union.internal.j0");
+            java.lang.reflect.Method setMethod = j0Class.getDeclaredMethod("a", float.class);
+            setMethod.setAccessible(true);
+
+            ViewGroup decorView = (ViewGroup) activity.getWindow().getDecorView();
+            int count = setShakeThresholdRecursive(decorView, j0Class, setMethod, threshold);
+            if (count > 0) {
+                Log.d(TAG, "shake: threshold set to " + threshold + " for " + count + " ad view(s)");
+                return true;
+            } else {
+                Log.d(TAG, "shake: no j0 instance found in ad views");
+                return false;
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "shake: set threshold failed", t);
+            return false;
+        }
+    }
+
+    /**
+     * 递归遍历 View 树,查找 j0 实例并设置阈值。
+     * 查找策略:对每个 View 及其字段(递归到 3 层深度)查找 j0 类型字段。
+     */
+    private static int setShakeThresholdRecursive(View view, Class<?> j0Class,
+                                                   java.lang.reflect.Method setMethod,
+                                                   float threshold) {
+        int count = 0;
+        if (view == null) return 0;
+
+        // 先在当前 View 的字段中查找 j0 实例
+        count += findAndSetJ0InFields(view, j0Class, setMethod, threshold, 0);
+
+        // 递归处理子 View
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                count += setShakeThresholdRecursive(group.getChildAt(i), j0Class, setMethod, threshold);
+            }
+        }
+        return count;
+    }
+
+    /**
+     * 在对象的字段中递归查找 j0 实例(最多 3 层深度)。
+     * 找到后调用 a(float) 设置阈值。
+     */
+    private static int findAndSetJ0InFields(Object obj, Class<?> j0Class,
+                                             java.lang.reflect.Method setMethod,
+                                             float threshold, int depth) {
+        if (obj == null || depth > 3) return 0;
+        int count = 0;
+
+        try {
+            Class<?> clazz = obj.getClass();
+            // 遍历当前类及父类的所有字段
+            while (clazz != null && clazz != Object.class) {
+                for (java.lang.reflect.Field field : clazz.getDeclaredFields()) {
+                    field.setAccessible(true);
+                    Object value = field.get(obj);
+                    if (value == null) continue;
+
+                    // 直接是 j0 实例
+                    if (j0Class.isInstance(value)) {
+                        try {
+                            setMethod.invoke(value, threshold);
+                            count++;
+                            Log.d(TAG, "shake: set threshold on " + clazz.getName() + "." + field.getName());
+                        } catch (Throwable t) {
+                            Log.w(TAG, "shake: invoke a(float) failed on " + field.getName(), t);
+                        }
+                    }
+                    // 递归查找非基本类型字段(避免 String/Context 等无意义递归)
+                    else if (depth < 3 && !value.getClass().isPrimitive()
+                             && !value.getClass().getName().startsWith("android.")
+                             && !value.getClass().getName().startsWith("java.")) {
+                        count += findAndSetJ0InFields(value, j0Class, setMethod, threshold, depth + 1);
+                    }
+                }
+                clazz = clazz.getSuperclass();
+            }
+        } catch (Throwable t) {
+            // 忽略反射异常
+        }
+        return count;
+    }
+
+    /**
      * 命名 Runnable:浮窗广告展示 5 秒后自动关闭。
      * SDK 3 参版本 loadFloatingBannerAd 无主动关闭 API,
      * 通过遍历 DecorView 移除友盟浮窗 View 实现。
@@ -441,6 +550,17 @@ public final class UMAdSDK {
             } else {
                 Log.d(TAG, "floating: auto-removed " + removed + " umeng view(s)");
             }
+        }
+    }
+
+    /** 命名 Runnable:延迟设置浮窗广告摇一摇阈值 */
+    static class FloatingShakeRunnable implements Runnable {
+        private final Activity activity;
+        FloatingShakeRunnable(Activity activity) { this.activity = activity; }
+        @Override
+        public void run() {
+            // 阈值 8.0f(约 0.8g),比默认 20.0f 灵敏很多
+            setShakeThreshold(activity, 8.0f);
         }
     }
 
@@ -470,10 +590,44 @@ public final class UMAdSDK {
                         + container.getWidth() + "x" + container.getHeight());
                 display.show(container);
                 callback.onLoaded();
+                // show 后广告 View 已添加到 container,延迟 500ms 让 SDK 完成初始化
+                // 然后通过反射设置摇一摇阈值(降低灵敏度,稍微摇动就跳转)
+                new Handler(Looper.getMainLooper()).postDelayed(new SplashShakeRunnable(container), 500L);
             } catch (Throwable t) {
                 Log.e(TAG, "splash: show failed", t);
                 callback.onSkip();
             }
+        }
+    }
+
+    /** 命名 Runnable:延迟设置开屏广告摇一摇阈值 */
+    static class SplashShakeRunnable implements Runnable {
+        private final ViewGroup container;
+        SplashShakeRunnable(ViewGroup container) { this.container = container; }
+        @Override
+        public void run() {
+            // 阈值 8.0f(约 0.8g),比默认 20.0f 灵敏很多
+            setShakeThresholdOnContainer(container, 8.0f);
+        }
+    }
+
+    /**
+     * 在指定 container 中查找 j0 实例并设置摇一摇阈值。
+     * 用于开屏广告(show(container) 模式,广告 View 在 container 中)。
+     */
+    private static void setShakeThresholdOnContainer(ViewGroup container, float threshold) {
+        try {
+            Class<?> j0Class = Class.forName("com.umeng.union.internal.j0");
+            java.lang.reflect.Method setMethod = j0Class.getDeclaredMethod("a", float.class);
+            setMethod.setAccessible(true);
+            int count = setShakeThresholdRecursive(container, j0Class, setMethod, threshold);
+            if (count > 0) {
+                Log.d(TAG, "shake: threshold set to " + threshold + " for " + count + " ad view(s)");
+            } else {
+                Log.d(TAG, "shake: no j0 instance found in container");
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "shake: set threshold on container failed", t);
         }
     }
 }
