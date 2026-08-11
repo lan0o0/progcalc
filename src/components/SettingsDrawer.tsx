@@ -3,6 +3,7 @@ import { BIT_WIDTHS, BitWidth, Encoding } from "@/types";
 import { useCalculator } from "@/store/calculatorStore";
 import { cn } from "@/lib/utils";
 import AboutSection from "./AboutSection";
+import ThemeSection from "./ThemeSection";
 
 interface Props {
   open: boolean;
@@ -59,6 +60,9 @@ export default function SettingsDrawer({ open, onClose }: Props) {
         </header>
 
         <div className="flex-1 space-y-5 overflow-y-auto px-4 py-4">
+          {/* 主题颜色 */}
+          <ThemeSection />
+
           {/* 符号性 */}
           <Section title="符号性">
             <div className="grid grid-cols-2 gap-2">

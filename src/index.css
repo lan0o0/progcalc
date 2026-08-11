@@ -2,6 +2,59 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============ 主题变量 ============ */
+/* 深色(默认):与原 macOS 计算器配色一致 */
+:root {
+  --c-panel: 28 28 30; /* #1C1C1E */
+  --c-screen: 0 0 0; /* #000000 */
+  --c-keyDark: 51 51 51; /* #333333 */
+  --c-keyDarkHover: 74 74 74; /* #4A4A4A */
+  --c-keyFunc: 165 165 165; /* #A5A5A5 */
+  --c-keyFuncHover: 190 190 190; /* #BEBEBE */
+  --c-keyOp: 255 159 10; /* #FF9F0A */
+  --c-keyOpHover: 255 179 64; /* #FFB340 */
+  --c-keyOpActive: 255 200 89; /* #FFC859 */
+  --c-ink: 255 255 255; /* #FFFFFF */
+  --c-inkDim: 142 142 147; /* #8E8E93 */
+  --c-bitOn: 255 159 10; /* #FF9F0A */
+  --c-bitOff: 44 44 46; /* #2C2C2E */
+  --c-bitSign: 10 132 255; /* #0A84FF */
+  --c-divider: 56 56 58; /* #38383A */
+
+  /* body 渐变(深色) */
+  --bg-grad-1: 42 42 46; /* #2A2A2E */
+  --bg-grad-2: 10 10 12; /* #0A0A0C */
+  --bg-grad-3: 0 0 0; /* #000000 */
+
+  color-scheme: dark;
+}
+
+/* 浅色 */
+:root[data-theme="light"] {
+  --c-panel: 242 242 247; /* #F2F2F7 */
+  --c-screen: 233 233 238; /* #E9E9EE */
+  --c-keyDark: 209 209 214; /* #D1D1D6 */
+  --c-keyDarkHover: 199 199 204; /* #C7C7CC */
+  --c-keyFunc: 179 179 184; /* #B3B3B8 */
+  --c-keyFuncHover: 165 165 170; /* #A5A5AA */
+  --c-keyOp: 255 149 0; /* #FF9500 */
+  --c-keyOpHover: 255 174 51; /* #FFAE33 */
+  --c-keyOpActive: 255 199 89; /* #FFC759 */
+  --c-ink: 28 28 30; /* #1C1C1E */
+  --c-inkDim: 142 142 147; /* #8E8E93 */
+  --c-bitOn: 255 149 0; /* #FF9500 */
+  --c-bitOff: 229 229 234; /* #E5E5EA */
+  --c-bitSign: 10 132 255; /* #0A84FF */
+  --c-divider: 198 198 200; /* #C6C6C8 */
+
+  /* body 渐变(浅色) */
+  --bg-grad-1: 242 242 247; /* #F2F2F7 */
+  --bg-grad-2: 229 229 234; /* #E5E5EA */
+  --bg-grad-3: 217 217 222; /* #D9D9DE */
+
+  color-scheme: light;
+}
+
 :root {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI",
     Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
@@ -12,7 +65,6 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color-scheme: dark;
 }
 
 html,
@@ -25,12 +77,14 @@ body {
   margin: 0;
   background: radial-gradient(
       120% 80% at 50% 0%,
-      #2a2a2e 0%,
-      #0a0a0c 60%,
-      #000000 100%
+      rgb(var(--bg-grad-1)) 0%,
+      rgb(var(--bg-grad-2)) 60%,
+      rgb(var(--bg-grad-3)) 100%
     )
     fixed;
   min-height: 100vh;
+  /* 主题切换平滑过渡 */
+  transition: background 0.3s ease;
 }
 
 /* 隐藏 number input 的 spinner */

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { X, RefreshCw } from "lucide-react";
 import { LegalDocument } from "@/legal/content";
+import { useThemeStore, getEffectiveTheme } from "@/store/themeStore";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -14,6 +15,9 @@ interface Props {
  *
  * 合规方案1:协议内容为公网独立 HTML 文件,可被监管验证,更新无需发版。
  * 本地不保留协议正文副本,仅保留标题/版本等元数据用于展示。
+ *
+ * 主题联动:iframe src 拼接 ?theme= 参数,公网页面读取后切换深色/浅色样式。
+ * 主题变化时通过 reloadKey 强制 iframe 重新加载。
  */
 export default function LegalModal({ open, doc, onClose }: Props) {
   const [loading, setLoading] = useState(true);
@@ -21,6 +25,12 @@ export default function LegalModal({ open, doc, onClose }: Props) {
   const [reloadKey, setReloadKey] = useState(0);
   // 加载超时定时器(8 秒未触发 onLoad 视为失败)
   const timerRef = useRef<number | null>(null);
+
+  const themeMode = useThemeStore((s) => s.mode);
+  const effectiveTheme = getEffectiveTheme(themeMode);
+
+  // 拼接带主题参数的 URL
+  const iframeSrc = doc ? `${doc.url}?theme=${effectiveTheme}` : "";
 
   useEffect(() => {
     if (!open || !doc) return;
@@ -35,6 +45,14 @@ export default function LegalModal({ open, doc, onClose }: Props) {
       if (timerRef.current) window.clearTimeout(timerRef.current);
     };
   }, [open, doc, reloadKey]);
+
+  // 主题变化时重载 iframe 以应用新主题
+  useEffect(() => {
+    if (open && doc) {
+      setReloadKey((k) => k + 1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveTheme]);
 
   const handleIframeLoad = () => {
     if (timerRef.current) window.clearTimeout(timerRef.current);
@@ -126,10 +144,10 @@ export default function LegalModal({ open, doc, onClose }: Props) {
                 ) : (
                   <iframe
                     key={reloadKey}
-                    src={doc.url}
+                    src={iframeSrc}
                     onLoad={handleIframeLoad}
                     title={doc.title}
-                    className="h-full w-full border-0 bg-white"
+                    className="h-full w-full border-0"
                     // 允许同源访问以便复制选中文本;禁止外部跳转
                     sandbox="allow-same-origin allow-popups"
                   />

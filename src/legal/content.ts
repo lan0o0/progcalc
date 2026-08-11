@@ -32,7 +32,7 @@ export interface LegalDocument {
 export const APP_INFO = {
   name: "程序员计算器",
   appNameEn: "Programmer Calculator",
-  version: "2.10.0",
+  version: "2.11.0",
   developer: "郑州格一网络科技有限公司",
   contactEmail: "lan0o0@qq.com",
   updateDate: "2026-08-07",

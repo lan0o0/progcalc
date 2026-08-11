@@ -28,6 +28,28 @@
   .footer { margin-top: 28px; padding-top: 16px; border-top: 1px solid #f0f0f2; font-size: 12px; color: #86868b; text-align: center; }
   a { color: #4A90D9; text-decoration: none; }
   .copy { -webkit-user-select: text; user-select: text; }
+
+  /* 深色主题:html[data-theme="dark"] */
+  html[data-theme="dark"] body { color: #f5f5f7; background: #0a0a0c; }
+  html[data-theme="dark"] .wrap { background: #1C1C1E; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+  html[data-theme="dark"] .meta { color: #8E8E93; border-bottom-color: #38383A; }
+  html[data-theme="dark"] .intro { color: #aeaeb2; background: #2C2C2E; }
+  html[data-theme="dark"] p, html[data-theme="dark"] li { color: #e5e5ea; }
+  html[data-theme="dark"] .footer { color: #8E8E93; border-top-color: #38383A; }
+  html[data-theme="dark"] a { color: #0A84FF; }
+  html[data-theme="dark"] h2 { border-left-color: #FF9F0A; }
+
+  /* 自动模式:无 data-theme 时跟随系统 */
+  @media (prefers-color-scheme: dark) {
+    html:not([data-theme="light"]) body { color: #f5f5f7; background: #0a0a0c; }
+    html:not([data-theme="light"]) .wrap { background: #1C1C1E; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+    html:not([data-theme="light"]) .meta { color: #8E8E93; border-bottom-color: #38383A; }
+    html:not([data-theme="light"]) .intro { color: #aeaeb2; background: #2C2C2E; }
+    html:not([data-theme="light"]) p, html:not([data-theme="light"]) li { color: #e5e5ea; }
+    html:not([data-theme="light"]) .footer { color: #8E8E93; border-top-color: #38383A; }
+    html:not([data-theme="light"]) a { color: #0A84FF; }
+    html:not([data-theme="light"]) h2 { border-left-color: #FF9F0A; }
+  }
 </style>
 </head>
 <body>
@@ -73,5 +95,14 @@
     © 2026 郑州格一网络科技有限公司 · 程序员计算器
   </div>
 </div>
+<script>
+  (function() {
+    var p = new URLSearchParams(location.search).get('theme');
+    if (p === 'dark' || p === 'light') {
+      document.documentElement.setAttribute('data-theme', p);
+    }
+    // 不传或 'auto' 时不设 data-theme,由 CSS 媒体查询跟随系统
+  })();
+</script>
 </body>
 </html>

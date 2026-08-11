@@ -69,9 +69,14 @@ export default function AboutSection() {
         ))}
       </div>
 
-      <p className="mt-2 px-1 text-[10px] leading-relaxed text-inkDim/60">
-        开发者:{APP_INFO.developer} · 更新日期:{APP_INFO.updateDate}
-      </p>
+      <div className="mt-2 space-y-0.5 px-1">
+        <p className="text-[10px] leading-relaxed text-inkDim/60">
+          开发者:{APP_INFO.developer}
+        </p>
+        <p className="text-[10px] leading-relaxed text-inkDim/60">
+          更新日期:{APP_INFO.updateDate}
+        </p>
+      </div>
 
       <LegalModal
         open={modalOpen}

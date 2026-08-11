@@ -9,22 +9,23 @@ export default {
     },
     extend: {
       colors: {
-        // macOS 计算器配色
-        panel: "#1C1C1E", // 外层面板背景
-        screen: "#000000", // 显示屏背景
-        keyDark: "#333333", // 数字键
-        keyDarkHover: "#4A4A4A",
-        keyFunc: "#A5A5A5", // 功能键(AC/⌫ 等)
-        keyFuncHover: "#BEBEBE",
-        keyOp: "#FF9F0A", // 运算键橙色
-        keyOpHover: "#FFB340",
-        keyOpActive: "#FFC859",
-        ink: "#FFFFFF", // 主文字
-        inkDim: "#8E8E93", // 次要文字
-        bitOn: "#FF9F0A", // 位图为 1
-        bitOff: "#2C2C2E", // 位图为 0
-        bitSign: "#0A84FF", // 符号位边框
-        divider: "#38383A",
+        // macOS 计算器配色(通过 CSS 变量驱动,支持深色/浅色主题切换)
+        // 变量值定义在 index.css 的 :root(深色) 与 [data-theme="light"](浅色)
+        panel: "rgb(var(--c-panel) / <alpha-value>)",
+        screen: "rgb(var(--c-screen) / <alpha-value>)",
+        keyDark: "rgb(var(--c-keyDark) / <alpha-value>)",
+        keyDarkHover: "rgb(var(--c-keyDarkHover) / <alpha-value>)",
+        keyFunc: "rgb(var(--c-keyFunc) / <alpha-value>)",
+        keyFuncHover: "rgb(var(--c-keyFuncHover) / <alpha-value>)",
+        keyOp: "rgb(var(--c-keyOp) / <alpha-value>)",
+        keyOpHover: "rgb(var(--c-keyOpHover) / <alpha-value>)",
+        keyOpActive: "rgb(var(--c-keyOpActive) / <alpha-value>)",
+        ink: "rgb(var(--c-ink) / <alpha-value>)",
+        inkDim: "rgb(var(--c-inkDim) / <alpha-value>)",
+        bitOn: "rgb(var(--c-bitOn) / <alpha-value>)",
+        bitOff: "rgb(var(--c-bitOff) / <alpha-value>)",
+        bitSign: "rgb(var(--c-bitSign) / <alpha-value>)",
+        divider: "rgb(var(--c-divider) / <alpha-value>)",
       },
       fontFamily: {
         mono: [
