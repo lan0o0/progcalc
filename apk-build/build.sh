@@ -28,11 +28,13 @@ $BT/aapt2 link \
   --target-sdk-version 34 \
   --no-compress-regex '\.(html|js|css|svg|webmanifest|json|png)$'
 
-echo "=== 3. 编译 Java (javac, --release 8 避免匿名内部类让 R8 崩溃) ==="
-javac --release 8 \
+echo "=== 3. 编译 Java (javac, source/target 11) ==="
+# 编译所有 .java 文件(MainActivity + UMAdSDK + AppBridge 等)
+# source/target 11:d8 8.2.2 处理 release 8 字节码会 NPE,用 11 兼容
+javac --release 11 \
   -cp $PLATFORM/android.jar \
   -d obj \
-  src/com/progcalc/app/MainActivity.java
+  $(find src -name "*.java")
 
 echo "=== 4. 转换为 dex (d8) ==="
 $BT/d8 \
