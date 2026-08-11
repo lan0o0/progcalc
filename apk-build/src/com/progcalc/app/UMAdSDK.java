@@ -99,12 +99,13 @@ public final class UMAdSDK {
     /**
      * 加载开屏广告。
      * 必须在 init() 成功后调用,否则直接回调 onSkip。
-     * 使用 show(Activity) 让 SDK 自己管理广告 View,而非自己管理 container。
+     * 使用 show(ViewGroup container) 展示广告(友盟 SDK 要求)。
      *
-     * @param activity Activity
-     * @param callback 回调
+     * @param activity  Activity
+     * @param container 广告展示容器(必须已 attach 且有尺寸,否则 SDK 会 discard)
+     * @param callback  回调
      */
-    public static void loadSplashAd(final Activity activity,
+    public static void loadSplashAd(final Activity activity, final ViewGroup container,
                                      final SplashAdCallback callback) {
         if (!inited) {
             Log.w(TAG, "splash: SDK not inited, skip");
@@ -123,7 +124,7 @@ public final class UMAdSDK {
 
             // AdLoadListener:加载成功后拿 UMSplashAD 对象(raw type 规避 d8 NPE)
             UMUnionApi.AdLoadListener loadListener =
-                    new SplashLoadListener(activity, mainHandler, timeout, callback);
+                    new SplashLoadListener(activity, container, mainHandler, timeout, callback);
 
             UMUnionSdk.loadSplashAd(config, loadListener, (int) SPLASH_TIMEOUT_MS);
             Log.d(TAG, "splash: loadSplashAd invoked");
@@ -192,13 +193,15 @@ public final class UMAdSDK {
     @SuppressWarnings({"rawtypes", "unchecked"})
     static class SplashLoadListener implements UMUnionApi.AdLoadListener {
         private final Activity activity;
+        private final ViewGroup container;
         private final Handler mainHandler;
         private final Runnable timeout;
         private final SplashAdCallback callback;
 
-        SplashLoadListener(Activity activity,
+        SplashLoadListener(Activity activity, ViewGroup container,
                            Handler mainHandler, Runnable timeout, SplashAdCallback callback) {
             this.activity = activity;
+            this.container = container;
             this.mainHandler = mainHandler;
             this.timeout = timeout;
             this.callback = callback;
@@ -213,7 +216,7 @@ public final class UMAdSDK {
                 UMSplashAD display = (UMSplashAD) displayObj;
                 display.setAdEventListener(new SplashEventListener(callback, activity));
                 // 必须在 UI 线程 show(用命名 Runnable,避免匿名类让 d8 崩溃)
-                activity.runOnUiThread(new SplashShowRunnable(display, activity, callback));
+                activity.runOnUiThread(new SplashShowRunnable(display, container, callback));
             } catch (Throwable t) {
                 Log.e(TAG, "splash: onSuccess handle failed", t);
                 callback.onSkip();
@@ -387,22 +390,28 @@ public final class UMAdSDK {
     /** 命名 Runnable:在 UI 线程展示开屏广告(避免匿名类让 d8 崩溃) */
     static class SplashShowRunnable implements Runnable {
         private final UMSplashAD display;
-        private final Activity activity;
+        private final ViewGroup container;
         private final SplashAdCallback callback;
 
-        SplashShowRunnable(UMSplashAD display, Activity activity, SplashAdCallback callback) {
+        SplashShowRunnable(UMSplashAD display, ViewGroup container, SplashAdCallback callback) {
             this.display = display;
-            this.activity = activity;
+            this.container = container;
             this.callback = callback;
         }
 
         @Override
         public void run() {
             try {
-                // 用 show(Activity) 让 SDK 自己管理广告 View(添加到 DecorView)
-                // 而非 show(container) 自己管理 container,这样 SDK 能正确完成曝光上报
-                Log.d(TAG, "splash: show via show(activity), let SDK manage view");
-                display.show(activity);
+                if (container == null) {
+                    Log.w(TAG, "splash: container is null, skip");
+                    callback.onSkip();
+                    return;
+                }
+                // 友盟 SDK 要求 show(ViewGroup container),不能传 Activity
+                // 打印 container 尺寸,便于排查 2003 discard
+                Log.d(TAG, "splash: show via show(container), size="
+                        + container.getWidth() + "x" + container.getHeight());
+                display.show(container);
                 callback.onLoaded();
             } catch (Throwable t) {
                 Log.e(TAG, "splash: show failed", t);

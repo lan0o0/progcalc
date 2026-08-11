@@ -289,14 +289,24 @@ public class MainActivity extends Activity {
         }
     }
 
-    /** 命名 Runnable:在下一帧加载开屏广告(用 show(Activity) 让 SDK 自己管理 view) */
+    /** 命名 Runnable:在下一帧加载开屏广告(用 show(container) 模式,友盟 SDK 要求 ViewGroup) */
     static class LoadSplashAdRunnable implements Runnable {
         private final MainActivity activity;
         LoadSplashAdRunnable(MainActivity activity) { this.activity = activity; }
         @Override
         public void run() {
-            Log.d(TAG, "loading splash ad now, using show(activity) mode");
-            UMAdSDK.loadSplashAd(activity, new SplashCallback(activity));
+            // 传入 splashAdContainer:onCreate 中已创建并 addView,此时已 attach 且有尺寸
+            // onWindowFocusChanged + post 延迟确保 layout pass 完成
+            FrameLayout container = activity.splashAdContainer;
+            if (container == null) {
+                Log.w(TAG, "splash container is null, skip ad");
+                activity.splashAdPending = false;
+                activity.goHome();
+                return;
+            }
+            Log.d(TAG, "loading splash ad, container size="
+                    + container.getWidth() + "x" + container.getHeight());
+            UMAdSDK.loadSplashAd(activity, container, new SplashCallback(activity));
         }
     }
 
