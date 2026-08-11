@@ -279,8 +279,23 @@ public class MainActivity extends Activity {
         super.onWindowFocusChanged(hasFocus);
         if (hasFocus && splashAdPending && !splashAdLoaded) {
             splashAdLoaded = true;
-            Log.d(TAG, "window focused, loading splash ad now");
-            UMAdSDK.loadSplashAd(this, splashAdContainer, new SplashCallback(this));
+            // 用 post 延迟一帧,确保 layout pass 完全完成
+            // onWindowFocusChanged 时 View 已可见,但可能还在 layout 中
+            Log.d(TAG, "window focused, post load splash ad to next frame");
+            splashAdContainer.post(new LoadSplashAdRunnable(this));
+        }
+    }
+
+    /** 命名 Runnable:在下一帧加载开屏广告(确保 container layout 完成) */
+    static class LoadSplashAdRunnable implements Runnable {
+        private final MainActivity activity;
+        LoadSplashAdRunnable(MainActivity activity) { this.activity = activity; }
+        @Override
+        public void run() {
+            int w = activity.splashAdContainer != null ? activity.splashAdContainer.getWidth() : -1;
+            int h = activity.splashAdContainer != null ? activity.splashAdContainer.getHeight() : -1;
+            Log.d(TAG, "loading splash ad now, container size=" + w + "x" + h);
+            UMAdSDK.loadSplashAd(activity, activity.splashAdContainer, new SplashCallback(activity));
         }
     }
 

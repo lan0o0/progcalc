@@ -377,6 +377,10 @@ public final class UMAdSDK {
         @Override
         public void run() {
             try {
+                int w = container.getWidth();
+                int h = container.getHeight();
+                Log.d(TAG, "splash: show, container size=" + w + "x" + h
+                        + ", visible=" + container.isShown());
                 display.show(container);
                 callback.onLoaded();
             } catch (Throwable t) {
