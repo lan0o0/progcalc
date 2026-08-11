@@ -31,8 +31,8 @@ import com.umeng.union.api.UMUnionApi;
 public final class UMAdSDK {
     private static final String TAG = "ProgCalc.Ad";
 
-    /** 友盟 Appkey —— 接入正式 SDK 时替换为真实值 */
-    private static final String UM_APP_KEY = "YOUR_UMENG_APPKEY";
+    /** 友盟 Appkey */
+    private static final String UM_APP_KEY = "6a76a12d934d206f5855c495";
     /** 渠道名 */
     private static final String UM_CHANNEL = "progcalc";
     /** 开屏广告 SlotId —— 接入正式 SDK 时替换为真实值 */
