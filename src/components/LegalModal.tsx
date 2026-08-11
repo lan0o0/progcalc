@@ -111,9 +111,6 @@ export default function LegalModal({ open, doc, onClose }: Props) {
                   <h3 className="truncate text-sm font-semibold text-ink">
                     {doc.title}
                   </h3>
-                  <p className="font-mono text-[10px] text-inkDim">
-                    {doc.version} · 更新于 {doc.updatedAt}
-                  </p>
                 </div>
                 <button
                   onClick={onClose}

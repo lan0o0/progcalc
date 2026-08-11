@@ -22,6 +22,8 @@ export interface LegalDocument {
   title: string;
   version: string;
   updatedAt: string;
+  /** 生效时间,与更新时间保持一致 */
+  effectiveAt: string;
   /** 公网独立成文的协议页 URL(App 内 WebView 加载,满足合规方案1) */
   url: string;
   intro: string;
@@ -32,10 +34,10 @@ export interface LegalDocument {
 export const APP_INFO = {
   name: "程序员计算器",
   appNameEn: "Programmer Calculator",
-  version: "2.11.0",
+  version: "2.11.2",
   developer: "郑州格一网络科技有限公司",
   contactEmail: "lan0o0@qq.com",
-  updateDate: "2026-08-07",
+  updateDate: "2026-08-11",
 } as const;
 
 /**
@@ -47,8 +49,9 @@ const LEGAL_BASE_URL = "https://lan0o0.github.io/progcalc/";
 /** ============ 用户协议 ============ */
 export const USER_AGREEMENT: LegalDocument = {
   title: "用户协议",
-  version: "v1.0.0",
+  version: "v" + APP_INFO.version,
   updatedAt: APP_INFO.updateDate,
+  effectiveAt: APP_INFO.updateDate,
   url: LEGAL_BASE_URL + "user-agreement.html",
   intro:
     "欢迎使用「程序员计算器」(以下简称「本应用」)。本应用由 " +
@@ -103,8 +106,9 @@ export const USER_AGREEMENT: LegalDocument = {
 /** ============ 隐私政策 ============ */
 export const PRIVACY_POLICY: LegalDocument = {
   title: "隐私政策",
-  version: "v1.0.0",
+  version: "v" + APP_INFO.version,
   updatedAt: APP_INFO.updateDate,
+  effectiveAt: APP_INFO.updateDate,
   url: LEGAL_BASE_URL + "privacy-policy.html",
   intro:
     "「程序员计算器」(以下简称「本应用」)非常重视用户隐私保护。本政策说明本应用在信息收集、使用、存储与保护方面的实际情况。请在使用前仔细阅读。",
@@ -178,8 +182,9 @@ export const PRIVACY_POLICY: LegalDocument = {
 /** ============ 个人信息收集清单 ============ */
 export const PERSONAL_INFO_LIST: LegalDocument = {
   title: "个人信息收集清单",
-  version: "v1.0.0",
+  version: "v" + APP_INFO.version,
   updatedAt: APP_INFO.updateDate,
+  effectiveAt: APP_INFO.updateDate,
   url: LEGAL_BASE_URL + "personal-info-list.html",
   intro:
     "依据《个人信息保护法》《App 违法违规收集使用个人信息行为认定方法》等规定,本清单如实披露「程序员计算器」对个人信息的收集情况。",
