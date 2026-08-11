@@ -174,6 +174,8 @@ public class MainActivity extends Activity {
         GoHomeRunnable(MainActivity activity) { this.activity = activity; }
         @Override
         public void run() {
+            // 移除 SDK 广告 View(show(activity) 模式下 SDK 将广告 View 加到 DecorView)
+            UMAdSDK.removeAdViews(activity);
             // 移除开屏广告容器,露出 WebView
             FrameLayout splash = activity.splashAdContainer;
             if (splash != null && splash.getParent() != null) {
@@ -269,7 +271,7 @@ public class MainActivity extends Activity {
     /**
      * 窗口首次获得焦点时加载开屏广告(关键修复)。
      *
-     * 友盟 SDK 在 onCreate 中同步调用 loadSplashAd 会因 container 未完成
+     * 友盟 SDK 在 onCreate 中同步调用 loadSplashAd 会因 Activity 未完成
      * attach/measure/layout 而触发 "ad action:discard"(code 2003)。
      * onWindowFocusChanged(true) 时,所有 View 已完成 layout,此时加载广告
      * 才能正常 expose。
@@ -282,20 +284,19 @@ public class MainActivity extends Activity {
             // 用 post 延迟一帧,确保 layout pass 完全完成
             // onWindowFocusChanged 时 View 已可见,但可能还在 layout 中
             Log.d(TAG, "window focused, post load splash ad to next frame");
-            splashAdContainer.post(new LoadSplashAdRunnable(this));
+            // 用 webView.post 而非 splashAdContainer.post(SDK 接管 view 后 container 可能被移除)
+            webView.post(new LoadSplashAdRunnable(this));
         }
     }
 
-    /** 命名 Runnable:在下一帧加载开屏广告(确保 container layout 完成) */
+    /** 命名 Runnable:在下一帧加载开屏广告(用 show(Activity) 让 SDK 自己管理 view) */
     static class LoadSplashAdRunnable implements Runnable {
         private final MainActivity activity;
         LoadSplashAdRunnable(MainActivity activity) { this.activity = activity; }
         @Override
         public void run() {
-            int w = activity.splashAdContainer != null ? activity.splashAdContainer.getWidth() : -1;
-            int h = activity.splashAdContainer != null ? activity.splashAdContainer.getHeight() : -1;
-            Log.d(TAG, "loading splash ad now, container size=" + w + "x" + h);
-            UMAdSDK.loadSplashAd(activity, activity.splashAdContainer, new SplashCallback(activity));
+            Log.d(TAG, "loading splash ad now, using show(activity) mode");
+            UMAdSDK.loadSplashAd(activity, new SplashCallback(activity));
         }
     }
 

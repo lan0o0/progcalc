@@ -99,13 +99,12 @@ public final class UMAdSDK {
     /**
      * 加载开屏广告。
      * 必须在 init() 成功后调用,否则直接回调 onSkip。
+     * 使用 show(Activity) 让 SDK 自己管理广告 View,而非自己管理 container。
      *
      * @param activity Activity
-     * @param container 广告容器
      * @param callback 回调
      */
     public static void loadSplashAd(final Activity activity,
-                                     final FrameLayout container,
                                      final SplashAdCallback callback) {
         if (!inited) {
             Log.w(TAG, "splash: SDK not inited, skip");
@@ -124,7 +123,7 @@ public final class UMAdSDK {
 
             // AdLoadListener:加载成功后拿 UMSplashAD 对象(raw type 规避 d8 NPE)
             UMUnionApi.AdLoadListener loadListener =
-                    new SplashLoadListener(activity, container, mainHandler, timeout, callback);
+                    new SplashLoadListener(activity, mainHandler, timeout, callback);
 
             UMUnionSdk.loadSplashAd(config, loadListener, (int) SPLASH_TIMEOUT_MS);
             Log.d(TAG, "splash: loadSplashAd invoked");
@@ -193,15 +192,13 @@ public final class UMAdSDK {
     @SuppressWarnings({"rawtypes", "unchecked"})
     static class SplashLoadListener implements UMUnionApi.AdLoadListener {
         private final Activity activity;
-        private final FrameLayout container;
         private final Handler mainHandler;
         private final Runnable timeout;
         private final SplashAdCallback callback;
 
-        SplashLoadListener(Activity activity, FrameLayout container,
+        SplashLoadListener(Activity activity,
                            Handler mainHandler, Runnable timeout, SplashAdCallback callback) {
             this.activity = activity;
-            this.container = container;
             this.mainHandler = mainHandler;
             this.timeout = timeout;
             this.callback = callback;
@@ -209,14 +206,15 @@ public final class UMAdSDK {
 
         @Override
         public void onSuccess(UMUnionApi.AdType type, UMUnionApi.AdDisplay displayObj) {
+            // 广告加载成功,取消 10 秒加载超时(展示阶段由 5 秒定时器控制)
+            mainHandler.removeCallbacks(timeout);
             Log.d(TAG, "splash: ad load success, registering listener");
             try {
                 UMSplashAD display = (UMSplashAD) displayObj;
-                display.setAdEventListener(new SplashEventListener(callback));
+                display.setAdEventListener(new SplashEventListener(callback, activity));
                 // 必须在 UI 线程 show(用命名 Runnable,避免匿名类让 d8 崩溃)
-                activity.runOnUiThread(new SplashShowRunnable(display, container, callback));
+                activity.runOnUiThread(new SplashShowRunnable(display, activity, callback));
             } catch (Throwable t) {
-                mainHandler.removeCallbacks(timeout);
                 Log.e(TAG, "splash: onSuccess handle failed", t);
                 callback.onSkip();
             }
@@ -235,28 +233,35 @@ public final class UMAdSDK {
      * 继承 AdEventListener:onExposed / onClicked / onError
      * 自身:onDismissed
      *
-     * 展示时长控制策略:
-     * - onExposed 时启动 5 秒最小展示定时器
-     * - 5 秒内收到 SDK 的 onDismissed 不立即 goHome,仅记录日志
-     * - 5 秒定时器到期后才真正触发 callback.onDismissed → goHome
-     * - 这样即使 SDK 提前 3 秒调用 onDismissed,广告 View 仍保持 5 秒
-     * - onError 仍然立即回调(广告展示失败不该阻塞用户)
+     * 展示时长控制策略(修复 error 2010 导致广告一闪而过):
+     * - 构造函数中立即启动 5 秒定时器(不等 onExposed,因为曝光可能失败)
+     * - onError(2010):曝光上报失败但广告已展示(visible=true),不 skip,等 5 秒定时器
+     * - onError(其他):广告真正无法展示,立即 skip
+     * - onDismissed:SDK 提前关闭也不立即 goHome,等 5 秒定时器
+     * - 5 秒定时器到期:移除 SDK 广告 View,触发 callback.onDismissed → goHome
      */
     static class SplashEventListener implements UMUnionApi.SplashAdListener {
         private final SplashAdCallback callback;
+        private final Activity activity;
         private volatile boolean dismissed = false;
-        private volatile long exposedTime = 0L;
+        private volatile long showTime = 0L;
 
-        SplashEventListener(SplashAdCallback callback) { this.callback = callback; }
+        SplashEventListener(SplashAdCallback callback, Activity activity) {
+            this.callback = callback;
+            this.activity = activity;
+            // 关键修复:在构造函数中启动 5 秒定时器,而非 onExposed
+            // 因为 error 2010(expose invalid)时 onExposed 不会被调用
+            // 但广告 View 已展示(visible=true),需要保持 5 秒
+            showTime = System.currentTimeMillis();
+            Log.d(TAG, "splash: listener created, start 5s min display timer (showTime=" + showTime + ")");
+            new Handler(Looper.getMainLooper()).postDelayed(
+                    new SplashMinDisplayRunnable(this), SPLASH_MIN_DISPLAY_MS);
+        }
 
         @Override
         public void onExposed() {
-            exposedTime = System.currentTimeMillis();
-            Log.d(TAG, "splash: exposed, start 5s min display timer");
+            Log.d(TAG, "splash: exposed (5s timer already running from constructor)");
             callback.onExposed();
-            // 启动 5 秒最小展示定时器,到期后强制 goHome
-            new Handler(Looper.getMainLooper()).postDelayed(
-                    new SplashMinDisplayRunnable(this), SPLASH_MIN_DISPLAY_MS);
         }
 
         @Override
@@ -267,7 +272,15 @@ public final class UMAdSDK {
         @Override
         public void onError(int code, String msg) {
             Log.w(TAG, "splash: show error " + code + ": " + msg);
-            // 广告展示失败,立即 goHome,不阻塞用户
+            // Error 2010 (expose invalid / report fail):
+            // 广告 View 已展示(visible=true),只是曝光上报失败
+            // 不 skip!让 5 秒定时器到期后正常 goHome
+            if (code == 2010) {
+                Log.d(TAG, "splash: error 2010 non-fatal, ad visible, keep 5s timer");
+                return;
+            }
+            // 其他错误:广告真正无法展示
+            // 如果还没展示(showTime==0 不可能,构造函数已设),立即 skip
             if (!dismissed) {
                 dismissed = true;
                 callback.onSkip();
@@ -276,19 +289,19 @@ public final class UMAdSDK {
 
         @Override
         public void onDismissed() {
-            long elapsed = exposedTime > 0 ? System.currentTimeMillis() - exposedTime : 0L;
+            long elapsed = showTime > 0 ? System.currentTimeMillis() - showTime : 0L;
             Log.d(TAG, "splash: SDK onDismissed, displayed=" + elapsed + "ms, waiting for 5s timer");
             // 不立即 goHome!等 5 秒定时器触发
-            // 如果已经超过 5 秒(定时器已触发),dismissed 会是 true,这里直接返回
-            // 如果不足 5 秒,忽略 SDK 的关闭通知,保持广告 View 显示
         }
 
         /** 5 秒最小展示定时器到期,真正触发 goHome */
         void onMinDisplayTimeout() {
             if (dismissed) return;
             dismissed = true;
-            long elapsed = exposedTime > 0 ? System.currentTimeMillis() - exposedTime : 0L;
+            long elapsed = System.currentTimeMillis() - showTime;
             Log.d(TAG, "splash: 5s min display reached, displayed=" + elapsed + "ms, goHome");
+            // show(activity) 模式下 SDK 广告 View 在 DecorView 上,需要手动移除
+            removeAdViews(activity);
             callback.onDismissed();
         }
     }
@@ -312,76 +325,84 @@ public final class UMAdSDK {
     }
 
     /**
+     * 从 DecorView 移除友盟广告 View(开屏 + 浮窗共用)。
+     * show(activity) 模式下 SDK 将广告 View 添加到 DecorView,
+     * 需手动遍历移除。检测类名含 umeng / umsdk / union 的 View。
+     *
+     * @param activity Activity
+     * @return 移除的 View 数量
+     */
+    static int removeAdViews(Activity activity) {
+        if (activity == null || activity.isFinishing() || activity.isDestroyed()) return 0;
+        int removed = 0;
+        try {
+            ViewGroup decorView = (ViewGroup) activity.getWindow().getDecorView();
+            removed = removeUmengViewsRecursive(decorView);
+        } catch (Throwable t) {
+            Log.e(TAG, "removeAdViews failed", t);
+        }
+        return removed;
+    }
+
+    /** 递归遍历 ViewGroup,移除友盟广告 View,返回移除数量 */
+    private static int removeUmengViewsRecursive(ViewGroup parent) {
+        int removed = 0;
+        for (int i = parent.getChildCount() - 1; i >= 0; i--) {
+            View child = parent.getChildAt(i);
+            if (child == null) continue;
+            String name = child.getClass().getName().toLowerCase();
+            // 先递归处理子 ViewGroup(广告可能嵌套多层)
+            if (child instanceof ViewGroup) {
+                removed += removeUmengViewsRecursive((ViewGroup) child);
+            }
+            // 检测友盟 View:类名含 umeng / umsdk / union
+            if (name.contains("umeng") || name.contains("umsdk") || name.contains("union")) {
+                parent.removeView(child);
+                removed++;
+                Log.d(TAG, "removed ad view: " + child.getClass().getName());
+            }
+        }
+        return removed;
+    }
+
+    /**
      * 命名 Runnable:浮窗广告展示 5 秒后自动关闭。
      * SDK 3 参版本 loadFloatingBannerAd 无主动关闭 API,
      * 通过遍历 DecorView 移除友盟浮窗 View 实现。
-     * 若 SDK 已自动关闭则找不到 View,安全跳过。
-     *
-     * 检测策略:遍历 DecorView 全部子孙节点,移除符合以下任一特征的 View:
-     * - 类名包含 umeng / ums / union
-     * - 是 WebView 且 parent 是 DecorView 系(浮窗通常用 WebView 承载广告)
      */
     static class FloatingAutoCloseRunnable implements Runnable {
         private final Activity activity;
         FloatingAutoCloseRunnable(Activity activity) { this.activity = activity; }
         @Override
         public void run() {
-            if (activity.isFinishing() || activity.isDestroyed()) return;
-            try {
-                ViewGroup decorView = (ViewGroup) activity.getWindow().getDecorView();
-                int removed = removeUmengViews(decorView);
-                if (removed == 0) {
-                    Log.d(TAG, "floating: auto-close no umeng view found (already closed or not shown)");
-                } else {
-                    Log.d(TAG, "floating: auto-removed " + removed + " umeng view(s)");
-                }
-            } catch (Throwable t) {
-                Log.e(TAG, "floating: auto-close failed", t);
+            int removed = removeAdViews(activity);
+            if (removed == 0) {
+                Log.d(TAG, "floating: auto-close no umeng view found (already closed or not shown)");
+            } else {
+                Log.d(TAG, "floating: auto-removed " + removed + " umeng view(s)");
             }
-        }
-
-        /** 递归遍历 ViewGroup,移除友盟广告 View,返回移除数量 */
-        private int removeUmengViews(ViewGroup parent) {
-            int removed = 0;
-            for (int i = parent.getChildCount() - 1; i >= 0; i--) {
-                View child = parent.getChildAt(i);
-                if (child == null) continue;
-                String name = child.getClass().getName().toLowerCase();
-                // 先递归处理子 ViewGroup(浮窗可能嵌套多层)
-                if (child instanceof ViewGroup) {
-                    removed += removeUmengViews((ViewGroup) child);
-                }
-                // 检测友盟 View:类名含 umeng / ums / union
-                if (name.contains("umeng") || name.contains("umsdk") || name.contains("union")) {
-                    parent.removeView(child);
-                    removed++;
-                    Log.d(TAG, "floating: auto-removed view: " + child.getClass().getName());
-                }
-            }
-            return removed;
         }
     }
 
     /** 命名 Runnable:在 UI 线程展示开屏广告(避免匿名类让 d8 崩溃) */
     static class SplashShowRunnable implements Runnable {
         private final UMSplashAD display;
-        private final ViewGroup container;
+        private final Activity activity;
         private final SplashAdCallback callback;
 
-        SplashShowRunnable(UMSplashAD display, ViewGroup container, SplashAdCallback callback) {
+        SplashShowRunnable(UMSplashAD display, Activity activity, SplashAdCallback callback) {
             this.display = display;
-            this.container = container;
+            this.activity = activity;
             this.callback = callback;
         }
 
         @Override
         public void run() {
             try {
-                int w = container.getWidth();
-                int h = container.getHeight();
-                Log.d(TAG, "splash: show, container size=" + w + "x" + h
-                        + ", visible=" + container.isShown());
-                display.show(container);
+                // 用 show(Activity) 让 SDK 自己管理广告 View(添加到 DecorView)
+                // 而非 show(container) 自己管理 container,这样 SDK 能正确完成曝光上报
+                Log.d(TAG, "splash: show via show(activity), let SDK manage view");
+                display.show(activity);
                 callback.onLoaded();
             } catch (Throwable t) {
                 Log.e(TAG, "splash: show failed", t);
