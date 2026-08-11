@@ -96,7 +96,106 @@ src/
 - [隐私政策](./src/legal/content.ts) `PRIVACY_POLICY`
 - [个人信息收集清单](./src/legal/content.ts) `PERSONAL_INFO_LIST`
 
+## 广告集成排错记录
+
+集成友盟 UMUnionSdk 开屏广告过程中遇到的三个关键问题及解决方案,供后续维护参考。
+
+### 问题 1:`ad action:discard`(code 2003)
+
+**现象**:广告请求被 SDK 直接丢弃,日志 `splash: ad load failed: {"code":2003,"msg":"ad action:discard"}`。
+
+**根因**:在 `onCreate` 中同步调用 `loadSplashAd`,此时 Activity 尚未完成 attach/measure/layout,`container` 无尺寸,SDK 检测后丢弃广告。
+
+**解决**:广告加载延迟到 `onWindowFocusChanged(true)` + `webView.post()` 下一帧执行,确保 container 已有尺寸。
+
+相关代码:[MainActivity.java](./apk-build/src/com/progcalc/app/MainActivity.java) `onWindowFocusChanged` + `LoadSplashAdRunnable`
+
+### 问题 2:`show error 2010: expose invalid`(广告一闪而过)
+
+**现象**:广告展示仅 165ms 就被移除,日志 `splash: show error 2010: expose invalid. report fail`。
+
+**根因**(双重问题):
+1. 5 秒展示定时器原在 `onExposed()` 中启动,但曝光失败时 `onExposed()` 永不触发,定时器从未启动
+2. `onError(2010)` 立即调用 `onSkip()` → `goHome()`,广告 View 被提前移除
+
+**解决**:
+- 5 秒定时器改在 `SplashEventListener` 构造函数启动(不等 `onExposed`,因为曝光可能失败)
+- `onError(2010)` 视为非致命错误(广告 View 已展示 `visible=true`,仅曝光上报失败),不立即 skip,等 5 秒定时器到期
+
+相关代码:[UMAdSDK.java](./apk-build/src/com/progcalc/app/UMAdSDK.java) `SplashEventListener`
+
+### 问题 3:`RuntimeException: pls call show(ViewGroup container)`
+
+**现象**:广告加载成功后展示时抛异常,日志 `java.lang.RuntimeException: pls call show(ViewGroup container)`。
+
+**根因**:`UMSplashAD.show()` 重载只接受 `ViewGroup container`,传 `Activity` 会直接抛异常。
+
+**解决**:
+- `loadSplashAd` 增加 `ViewGroup container` 参数
+- `SplashShowRunnable` 改为 `display.show(container)`
+- `MainActivity` 传入 `splashAdContainer`(onCreate 中已创建并 attach)
+
+相关代码:[UMAdSDK.java](./apk-build/src/com/progcalc/app/UMAdSDK.java) `SplashShowRunnable`
+
+### 展示时长控制策略
+
+为确保开屏广告展示满 5 秒(即使 SDK 提前回调 `onDismissed` 或曝光失败),采用以下策略:
+
+```
+SplashEventListener 构造函数
+  └─ 启动 5 秒定时器(不等 onExposed,因为曝光可能失败)
+
+onError(2010)  →  非致命,不 skip,等 5 秒定时器
+onError(其他)  →  立即 skip(广告真正无法展示)
+onDismissed    →  不立即 goHome,等 5 秒定时器
+onExposed      →  仅记录,定时器已在构造函数启动
+
+5 秒定时器到期
+  └─ removeAdViews(activity)  // 清理 DecorView 上的 SDK 广告 View
+  └─ callback.onDismissed()   // 触发 goHome
+```
+
+### 最终验证日志(v2.11.13)
+
+```
+19:10:08.760  splash: ad load success, registering listener
+19:10:08.760  splash: listener created, start 5s min display timer
+19:10:08.760  splash: show via show(container), size=1216x2577        ← show(container) 修复
+19:10:09.010  splash: show error 2010: expose invalid, check network  ← 2010 仍出现
+19:10:09.010  splash: error 2010 non-fatal, ad visible, keep 5s timer  ← 非致命,保持展示
+19:10:13.761  splash: 5s min display reached, displayed=5001ms, goHome ← ✅ 展示 5 秒
+19:10:13.770  splash: removed ad view: com.umeng.union.widget.UMNativeLayout  ← 清理广告 View
+```
+
+详细排查过程见 [DEBUG.md](./DEBUG.md)。
+
 ## 更新日志
+
+### v2.11.13 — 2026-08-11
+
+- 🐛 **关键修复**:`UMSplashAD.show(Activity)` 抛出 `RuntimeException: pls call show(ViewGroup container)`
+- **根因**:友盟 SDK `UMSplashAD.show()` 重载只接受 `ViewGroup container`,传 `Activity` 会直接抛异常,导致广告加载成功后无法展示
+- **方案**:
+  - [UMAdSDK.java](./apk-build/src/com/progcalc/app/UMAdSDK.java) `loadSplashAd` 增加 `ViewGroup container` 参数,`SplashShowRunnable` 改为 `display.show(container)`
+  - [MainActivity.java](./apk-build/src/com/progcalc/app/MainActivity.java) `LoadSplashAdRunnable` 传入 `splashAdContainer`(onCreate 中已创建并 attach)
+  - `show()` 前打印 container 尺寸,便于排查 `2003 discard`
+- ✅ 验证日志:`show via show(container), size=1216x2577` → 广告正常展示 5 秒后 `goHome`
+
+### v2.11.12 — 2026-08-11
+
+- 🐛 **关键修复**:开屏广告 `show error 2010: expose invalid` 导致广告一闪而过(展示仅 165ms)
+- **根因**:5 秒展示定时器原在 `onExposed()` 中启动,但曝光失败时 `onExposed()` 永不触发,定时器从未启动;同时 `onError(2010)` 立即 `onSkip()` → `goHome()`,广告被提前移除
+- **方案**:
+  - 5 秒定时器改在 `SplashEventListener` 构造函数启动(不等 `onExposed`)
+  - `onError(2010)` 视为非致命错误(广告 View 已展示,仅曝光上报失败),不立即 skip,等 5 秒定时器到期
+  - 提取 `removeAdViews()` 共享方法,`onMinDisplayTimeout` 和 `GoHomeRunnable` 清理 DecorView 上的 SDK 广告 View
+  - `onSuccess` 取消 10 秒加载超时,展示阶段由 5 秒定时器控制
+- ✅ 验证日志:`error 2010 non-fatal, ad visible, keep 5s timer` → `5s min display reached, displayed=5001ms, goHome`
+
+### v2.11.11 — 2026-08-11
+
+- 🐛 修复开屏广告 `ad action:discard`(code 2003):container 未完成 attach/measure/layout 时加载广告会被 SDK 丢弃
+- **方案**:广告加载从 `onCreate` 延迟到 `onWindowFocusChanged(true)` + `webView.post()` 下一帧执行,确保 container 已有尺寸
 
 ### v2.11.4 — 2026-08-11
 
