@@ -235,9 +235,12 @@ public final class UMAdSDK {
      * 继承 AdEventListener:onExposed / onClicked / onError
      * 自身:onDismissed
      *
-     * 展示时长控制:onExposed 记录开始时间,onDismissed 时若不足
-     * SPLASH_MIN_DISPLAY_MS,则延迟补足后再触发 callback.onDismissed,
-     * 确保开屏广告至少展示 5 秒。
+     * 展示时长控制策略:
+     * - onExposed 时启动 5 秒最小展示定时器
+     * - 5 秒内收到 SDK 的 onDismissed 不立即 goHome,仅记录日志
+     * - 5 秒定时器到期后才真正触发 callback.onDismissed → goHome
+     * - 这样即使 SDK 提前 3 秒调用 onDismissed,广告 View 仍保持 5 秒
+     * - onError 仍然立即回调(广告展示失败不该阻塞用户)
      */
     static class SplashEventListener implements UMUnionApi.SplashAdListener {
         private final SplashAdCallback callback;
@@ -249,8 +252,11 @@ public final class UMAdSDK {
         @Override
         public void onExposed() {
             exposedTime = System.currentTimeMillis();
-            Log.d(TAG, "splash: exposed, start display timer");
+            Log.d(TAG, "splash: exposed, start 5s min display timer");
             callback.onExposed();
+            // 启动 5 秒最小展示定时器,到期后强制 goHome
+            new Handler(Looper.getMainLooper()).postDelayed(
+                    new SplashMinDisplayRunnable(this), SPLASH_MIN_DISPLAY_MS);
         }
 
         @Override
@@ -261,35 +267,39 @@ public final class UMAdSDK {
         @Override
         public void onError(int code, String msg) {
             Log.w(TAG, "splash: show error " + code + ": " + msg);
-            if (!dismissed) callback.onSkip();
+            // 广告展示失败,立即 goHome,不阻塞用户
+            if (!dismissed) {
+                dismissed = true;
+                callback.onSkip();
+            }
         }
 
         @Override
         public void onDismissed() {
+            long elapsed = exposedTime > 0 ? System.currentTimeMillis() - exposedTime : 0L;
+            Log.d(TAG, "splash: SDK onDismissed, displayed=" + elapsed + "ms, waiting for 5s timer");
+            // 不立即 goHome!等 5 秒定时器触发
+            // 如果已经超过 5 秒(定时器已触发),dismissed 会是 true,这里直接返回
+            // 如果不足 5 秒,忽略 SDK 的关闭通知,保持广告 View 显示
+        }
+
+        /** 5 秒最小展示定时器到期,真正触发 goHome */
+        void onMinDisplayTimeout() {
             if (dismissed) return;
             dismissed = true;
             long elapsed = exposedTime > 0 ? System.currentTimeMillis() - exposedTime : 0L;
-            Log.d(TAG, "splash: dismissed, displayed=" + elapsed + "ms");
-            if (elapsed < SPLASH_MIN_DISPLAY_MS) {
-                // 展示时间不足 5 秒,延迟补足后再 goHome
-                long delay = SPLASH_MIN_DISPLAY_MS - elapsed;
-                Log.d(TAG, "splash: delaying goHome " + delay + "ms to meet min display time");
-                new Handler(Looper.getMainLooper()).postDelayed(
-                        new SplashDismissRunnable(callback), delay);
-            } else {
-                callback.onDismissed();
-            }
+            Log.d(TAG, "splash: 5s min display reached, displayed=" + elapsed + "ms, goHome");
+            callback.onDismissed();
         }
     }
 
-    /** 命名 Runnable:延迟触发开屏广告 onDismissed(确保展示满 5 秒) */
-    static class SplashDismissRunnable implements Runnable {
-        private final SplashAdCallback callback;
-        SplashDismissRunnable(SplashAdCallback callback) { this.callback = callback; }
+    /** 命名 Runnable:5 秒最小展示定时器到期触发 goHome */
+    static class SplashMinDisplayRunnable implements Runnable {
+        private final SplashEventListener listener;
+        SplashMinDisplayRunnable(SplashEventListener listener) { this.listener = listener; }
         @Override
         public void run() {
-            Log.d(TAG, "splash: min display time reached, goHome");
-            callback.onDismissed();
+            listener.onMinDisplayTimeout();
         }
     }
 

@@ -234,12 +234,12 @@ public class MainActivity extends Activity {
                 if (w.getTag() == null) {
                     w.getViewTreeObserver().removeOnGlobalLayoutListener(this);
                     // 如果开屏广告正在加载中,不立即 goHome,等广告回调触发
-                    // 广告回调(onSkip/onDismissed)或 6 秒兜底超时会触发 goHome
+                    // 广告回调(onSkip/onDismissed)或 10 秒兜底超时会触发 goHome
                     if (activity.splashAdPending) {
                         Log.d(TAG, "layout ready, but splash ad pending, wait for callback");
-                        // 设置 6 秒兜底超时(比广告 5 秒超时多 1 秒),防止广告回调不触发
+                        // 设置 10 秒兜底超时(广告加载 5s + 展示 5s),防止广告回调不触发导致卡死
                         new Handler(Looper.getMainLooper()).postDelayed(
-                                new SplashFallbackRunnable(activity), 6000L);
+                                new SplashFallbackRunnable(activity), 10000L);
                     } else {
                         Log.d(TAG, "layout ready, goHome");
                         activity.goHome();
