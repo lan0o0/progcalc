@@ -42,6 +42,10 @@ public final class UMAdSDK {
     private static final String FLOATING_SLOT_ID = "100013101";
     /** 开屏广告超时时间(ms) */
     private static final long SPLASH_TIMEOUT_MS = 5000L;
+    /** 开屏广告最小展示时间(ms):不足则延迟 goHome 补足 */
+    private static final long SPLASH_MIN_DISPLAY_MS = 5000L;
+    /** 浮窗广告自动关闭时间(ms):展示 5 秒后自动移除 */
+    private static final long FLOATING_AUTO_CLOSE_MS = 5000L;
 
     private static volatile boolean preInited = false;
     private static volatile boolean inited = false;
@@ -153,6 +157,10 @@ public final class UMAdSDK {
             UMUnionApi.AdCloseListener closeListener = new FloatingCloseListener();
             UMUnionSdk.loadFloatingBannerAd(activity, config, closeListener);
             Log.d(TAG, "floating: loadFloatingBannerAd invoked");
+
+            // 5 秒后自动关闭浮窗(SDK 3 参版本无主动关闭 API,遍历 DecorView 移除友盟 View)
+            new Handler(Looper.getMainLooper()).postDelayed(
+                    new FloatingAutoCloseRunnable(activity), FLOATING_AUTO_CLOSE_MS);
         } catch (Throwable t) {
             Log.e(TAG, "floating: load failed", t);
         }
@@ -226,16 +234,22 @@ public final class UMAdSDK {
      * 命名 SplashAdListener:开屏广告展示/点击/错误/关闭回调。
      * 继承 AdEventListener:onExposed / onClicked / onError
      * 自身:onDismissed
+     *
+     * 展示时长控制:onExposed 记录开始时间,onDismissed 时若不足
+     * SPLASH_MIN_DISPLAY_MS,则延迟补足后再触发 callback.onDismissed,
+     * 确保开屏广告至少展示 5 秒。
      */
     static class SplashEventListener implements UMUnionApi.SplashAdListener {
         private final SplashAdCallback callback;
         private volatile boolean dismissed = false;
+        private volatile long exposedTime = 0L;
 
         SplashEventListener(SplashAdCallback callback) { this.callback = callback; }
 
         @Override
         public void onExposed() {
-            Log.d(TAG, "splash: exposed");
+            exposedTime = System.currentTimeMillis();
+            Log.d(TAG, "splash: exposed, start display timer");
             callback.onExposed();
         }
 
@@ -254,7 +268,27 @@ public final class UMAdSDK {
         public void onDismissed() {
             if (dismissed) return;
             dismissed = true;
-            Log.d(TAG, "splash: dismissed");
+            long elapsed = exposedTime > 0 ? System.currentTimeMillis() - exposedTime : 0L;
+            Log.d(TAG, "splash: dismissed, displayed=" + elapsed + "ms");
+            if (elapsed < SPLASH_MIN_DISPLAY_MS) {
+                // 展示时间不足 5 秒,延迟补足后再 goHome
+                long delay = SPLASH_MIN_DISPLAY_MS - elapsed;
+                Log.d(TAG, "splash: delaying goHome " + delay + "ms to meet min display time");
+                new Handler(Looper.getMainLooper()).postDelayed(
+                        new SplashDismissRunnable(callback), delay);
+            } else {
+                callback.onDismissed();
+            }
+        }
+    }
+
+    /** 命名 Runnable:延迟触发开屏广告 onDismissed(确保展示满 5 秒) */
+    static class SplashDismissRunnable implements Runnable {
+        private final SplashAdCallback callback;
+        SplashDismissRunnable(SplashAdCallback callback) { this.callback = callback; }
+        @Override
+        public void run() {
+            Log.d(TAG, "splash: min display time reached, goHome");
             callback.onDismissed();
         }
     }
@@ -264,6 +298,41 @@ public final class UMAdSDK {
         @Override
         public void onClosed(UMUnionApi.AdType type) {
             Log.d(TAG, "floating: closed, type=" + type);
+        }
+    }
+
+    /**
+     * 命名 Runnable:浮窗广告展示 5 秒后自动关闭。
+     * SDK 3 参版本 loadFloatingBannerAd 无主动关闭 API,
+     * 通过遍历 DecorView 移除友盟浮窗 View 实现。
+     * 若 SDK 已自动关闭则找不到 View,安全跳过。
+     */
+    static class FloatingAutoCloseRunnable implements Runnable {
+        private final Activity activity;
+        FloatingAutoCloseRunnable(Activity activity) { this.activity = activity; }
+        @Override
+        public void run() {
+            if (activity.isFinishing() || activity.isDestroyed()) return;
+            try {
+                ViewGroup decorView = (ViewGroup) activity.getWindow().getDecorView();
+                int removed = 0;
+                for (int i = decorView.getChildCount() - 1; i >= 0; i--) {
+                    View child = decorView.getChildAt(i);
+                    if (child == null) continue;
+                    String name = child.getClass().getName().toLowerCase();
+                    // 友盟浮窗 View 类名包含 umeng
+                    if (name.contains("umeng")) {
+                        decorView.removeView(child);
+                        removed++;
+                        Log.d(TAG, "floating: auto-removed umeng view: " + child.getClass().getName());
+                    }
+                }
+                if (removed == 0) {
+                    Log.d(TAG, "floating: auto-close no umeng view found (already closed or not shown)");
+                }
+            } catch (Throwable t) {
+                Log.e(TAG, "floating: auto-close failed", t);
+            }
         }
     }
 
