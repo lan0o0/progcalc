@@ -19,16 +19,39 @@ export const useThemeStore = create<ThemeStore>()(
     }),
     {
       name: THEME_KEY,
+      // hydrate 完成后重新应用主题,修复初始用默认 "auto" 在 localStorage 读取前
+      // 可能短暂应用错误主题的时序问题
+      onRehydrateStorage: () => (state) => {
+        if (state) applyThemeToDom(state.mode);
+      },
     }
   )
 );
 
-/** 读取系统深浅色偏好(仅客户端) */
+/**
+ * 读取系统深浅色偏好。
+ * 优先级:
+ *   1. 原生桥 appNative.getSystemTheme() —— Android WebView 默认不透传
+ *      prefers-color-scheme 给 Web 内容,必须由原生读取 Configuration.uiMode
+ *   2. window.matchMedia —— 浏览器/PWA 环境
+ *   3. 兜底 true(深色) —— 与原应用一致
+ */
 function systemPrefersDark(): boolean {
+  // 1. 原生桥:同步返回,Android 端读取系统实际配置
+  try {
+    const native = window.appNative;
+    if (native && typeof native.getSystemTheme === "function") {
+      const t = native.getSystemTheme();
+      if (t === "dark" || t === "light") return t === "dark";
+    }
+  } catch {
+    /* 原生桥不可用,继续回退 */
+  }
+  // 2. matchMedia:浏览器/PWA
   try {
     return window.matchMedia("(prefers-color-scheme: dark)").matches;
   } catch {
-    return true; // 兜底:无法检测时默认深色(与原应用一致)
+    return true; // 3. 兜底深色
   }
 }
 
@@ -70,22 +93,29 @@ export function initTheme(): () => void {
   });
 
   // 3. 监听系统主题变化(auto 模式下实时切换)
+  //    a) 原生桥(Android):onConfigurationChanged 触发时,原生通过
+  //       evaluateJavascript 调用 window.__onNativeSystemThemeChange
+  //    b) matchMedia(浏览器/PWA):监听 prefers-color-scheme 变化
+  const onSystemThemeChanged = () => {
+    if (useThemeStore.getState().mode === "auto") {
+      applyThemeToDom("auto");
+    }
+  };
+  // 挂载原生回调,供 Android 端 dispatchSystemThemeChanged() 调用
+  window.__onNativeSystemThemeChange = onSystemThemeChanged;
+
   let unsubMedia: (() => void) | null = null;
   try {
     const mql = window.matchMedia("(prefers-color-scheme: dark)");
-    const onChange = () => {
-      if (useThemeStore.getState().mode === "auto") {
-        applyThemeToDom("auto");
-      }
-    };
-    mql.addEventListener("change", onChange);
-    unsubMedia = () => mql.removeEventListener("change", onChange);
+    mql.addEventListener("change", onSystemThemeChanged);
+    unsubMedia = () => mql.removeEventListener("change", onSystemThemeChanged);
   } catch {
-    /* 不支持时忽略 */
+    /* 不支持时忽略,原生桥仍可工作 */
   }
 
   return () => {
     unsubStore();
     if (unsubMedia) unsubMedia();
+    delete window.__onNativeSystemThemeChange;
   };
 }
