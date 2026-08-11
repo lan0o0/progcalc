@@ -1,6 +1,7 @@
 package com.progcalc.app;
 
 import android.app.Activity;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
@@ -56,8 +57,8 @@ public class MainActivity extends Activity {
                 FrameLayout.LayoutParams.MATCH_PARENT));
 
         webView = new WebView(this);
-        // 注入原生桥:供前端「不同意并退出」调用,仅暴露 exit()
-        webView.addJavascriptInterface(new ExitBridge(this), "appNative");
+        // 注入原生桥:供前端「不同意并退出」与「读取系统主题」调用
+        webView.addJavascriptInterface(new AppBridge(this), "appNative");
         // 强制硬件加速层
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
 
@@ -218,13 +219,74 @@ public class MainActivity extends Activity {
         }
     }
 
-    /** JS 桥:前端调用 appNative.exit() 退出应用,仅暴露 exit() */
-    static class ExitBridge {
+    /** 命名 Runnable:在 UI 线程通知前端系统主题已变化 */
+    static class NotifyThemeRunnable implements Runnable {
         private final MainActivity activity;
-        ExitBridge(MainActivity activity) { this.activity = activity; }
+        NotifyThemeRunnable(MainActivity activity) { this.activity = activity; }
+        @Override
+        public void run() {
+            activity.dispatchSystemThemeChanged();
+        }
+    }
+
+    /**
+     * JS 桥:前端通过 appNative.exit() 退出应用、appNative.getSystemTheme() 读取系统主题。
+     * 注意:@JavascriptInterface 方法运行在 WebView 私有线程,不能直接操作 UI。
+     */
+    static class AppBridge {
+        private final MainActivity activity;
+        AppBridge(MainActivity activity) { this.activity = activity; }
+
+        /** 退出应用 */
         @JavascriptInterface
         public void exit() {
             activity.runOnUiThread(new ExitRunnable(activity));
+        }
+
+        /**
+         * 返回当前系统主题:"dark" 或 "light"。
+         * WebView 默认不把 prefers-color-scheme 透传给 Web 内容,所以由原生直接读取
+         * Configuration.uiMode 并返回字符串给 JS。
+         */
+        @JavascriptInterface
+        public String getSystemTheme() {
+            int uiMode = activity.getResources().getConfiguration().uiMode
+                    & Configuration.UI_MODE_NIGHT_MASK;
+            return (uiMode == Configuration.UI_MODE_NIGHT_YES) ? "dark" : "light";
+        }
+    }
+
+    /**
+     * 系统主题变化时(用户在系统设置切换深浅色),主动通过 evaluateJavascript 通知前端。
+     * 前端在 window 上挂载 __onNativeSystemThemeChange 回调接收。
+     */
+    void dispatchSystemThemeChanged() {
+        if (webView == null) return;
+        // 用 IIFE 安全调用,即使回调未定义也不报错
+        String js = "(function(){"
+                + "if(typeof window.__onNativeSystemThemeChange==='function'){"
+                + "window.__onNativeSystemThemeChange();"
+                + "}else{console.warn('[theme] native theme change received but no JS handler');}"
+                + "})();";
+        webView.evaluateJavascript(js, null);
+        Log.d(TAG, "dispatched system theme change to JS");
+    }
+
+    /**
+     * 系统配置变化时回调(包括深浅色切换)。
+     * 注意:AndroidManifest 默认会让 Activity 重启,需在 manifest 中给 Activity 加
+     * android:configChanges="uiMode" 才会走到这里;若未配置,本方法不会被调用,
+     * 但 getSystemTheme() 仍能在每次前端调用时返回最新值。
+     */
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        // 仅当 uiMode 变化时才通知前端,避免无谓刷新
+        int newNight = newConfig.uiMode & Configuration.UI_MODE_NIGHT_MASK;
+        int oldNight = getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
+        if (newNight != oldNight) {
+            Log.d(TAG, "system uiMode changed -> " + (newNight == Configuration.UI_MODE_NIGHT_YES ? "dark" : "light"));
+            runOnUiThread(new NotifyThemeRunnable(this));
         }
     }
 }

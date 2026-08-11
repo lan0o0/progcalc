@@ -77,6 +77,7 @@ src/
 ├── legal/
 │   └── content.ts              # 用户协议 / 隐私政策 / 个人信息收集清单
 ├── store/calculatorStore.ts    # Zustand 状态(含算术/位运算逻辑)
+├── store/themeStore.ts         # 主题管理(auto/light/dark,原生桥 + matchMedia)
 ├── utils/                      # 转换与位运算工具
 └── types/index.ts              # 类型定义
 ```
@@ -95,6 +96,16 @@ src/
 - [个人信息收集清单](./src/legal/content.ts) `PERSONAL_INFO_LIST`
 
 ## 更新日志
+
+### v2.11.1 — 2026-08-11
+
+- 🐛 修复「自动」主题在 Android WebView 中始终为浅色的问题
+- **根因**:Android WebView 默认不将系统 `prefers-color-scheme` 透传给 Web 内容,导致 `window.matchMedia("(prefers-color-scheme: dark)")` 恒返回 `false`
+- **方案**:在 `MainActivity` 注入原生 JS 桥 `AppBridge`,通过 `appNative.getSystemTheme()` 直接读取 Android `Configuration.uiMode` 返回系统主题;前端 `systemPrefersDark()` 优先调用原生桥,回退 `matchMedia`
+- ✅ 系统主题切换实时响应:`AndroidManifest` 增加 `configChanges="uiMode"`,`onConfigurationChanged` 通过 `evaluateJavascript` 通知前端 `window.__onNativeSystemThemeChange` 回调
+- ✅ 修复 Zustand persist 时序:`onRehydrateStorage` 在 localStorage 水合后重新应用主题,避免初始闪烁
+- ✅ `ExitBridge` 升级为 `AppBridge`,同时承担退出与主题查询职责
+- 📝 新增 [DEBUG.md](./DEBUG.md) 记录本次排查过程
 
 ### v2.11.0 — 2026-08-07
 
