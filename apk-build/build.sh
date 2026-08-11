@@ -8,6 +8,9 @@ export KS=/workspace/android/progcalc.keystore
 
 cd /workspace/apk-build
 mkdir -p compiled-res obj out libs/extracted
+# 清空上次的编译产物(避免残留的匿名类 class 导致 d8 崩溃)
+rm -f obj/com/progcalc/app/*.class
+rm -f out/*.apk out/*.dex
 
 echo "=== 0. 解压友盟 SDK aar ==="
 for aar in libs/*.aar; do

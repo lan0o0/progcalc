@@ -30,4 +30,6 @@ apk-build/out/
 apk-build/obj/
 apk-build/compiled-res/
 apk-build/assets/index.html
+# 友盟 SDK aar 解压临时产物(build.sh 自动解压,不入库)
+apk-build/libs/extracted/
 .trae-html-share-packages/

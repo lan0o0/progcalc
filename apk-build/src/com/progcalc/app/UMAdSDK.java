@@ -5,6 +5,7 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
@@ -35,10 +36,10 @@ public final class UMAdSDK {
     private static final String UM_APP_KEY = "6a76a12d934d206f5855c495";
     /** 渠道名 */
     private static final String UM_CHANNEL = "progcalc";
-    /** 开屏广告 SlotId —— 接入正式 SDK 时替换为真实值 */
-    private static final String SPLASH_SLOT_ID = "YOUR_SPLASH_SLOT_ID";
-    /** 浮窗广告 SlotId —— 接入正式 SDK 时替换为真实值 */
-    private static final String FLOATING_SLOT_ID = "YOUR_FLOATING_SLOT_ID";
+    /** 开屏广告 SlotId */
+    private static final String SPLASH_SLOT_ID = "100013102";
+    /** 浮窗广告 SlotId */
+    private static final String FLOATING_SLOT_ID = "100013101";
     /** 开屏广告超时时间(ms) */
     private static final long SPLASH_TIMEOUT_MS = 5000L;
 
@@ -109,12 +110,7 @@ public final class UMAdSDK {
         }
 
         final Handler mainHandler = new Handler(Looper.getMainLooper());
-        final Runnable timeout = new Runnable() {
-            @Override public void run() {
-                Log.w(TAG, "splash: timeout, skip");
-                callback.onSkip();
-            }
-        };
+        final Runnable timeout = new SplashTimeoutRunnable(callback);
         mainHandler.postDelayed(timeout, SPLASH_TIMEOUT_MS);
 
         try {
@@ -122,50 +118,11 @@ public final class UMAdSDK {
                     .setSlotId(SPLASH_SLOT_ID)
                     .build();
 
-            UMUnionSdk.loadSplashAd(config, new UMUnionApi.AdRenderListener<UMSplashAD>() {
-                @Override
-                public void onSuccess(UMUnionApi.AdType type, UMSplashAD display) {
-                    Log.d(TAG, "splash: ad request success");
-                }
+            // AdLoadListener:加载成功后拿 UMSplashAD 对象(raw type 规避 d8 NPE)
+            UMUnionApi.AdLoadListener loadListener =
+                    new SplashLoadListener(activity, container, mainHandler, timeout, callback);
 
-                @Override
-                public void onFailure(UMUnionApi.AdType type, String message) {
-                    mainHandler.removeCallbacks(timeout);
-                    Log.w(TAG, "splash: ad request failed: " + message);
-                    callback.onSkip();
-                }
-
-                @Override
-                public void onRenderSuccess(UMUnionApi.AdType type, final UMSplashAD display) {
-                    mainHandler.removeCallbacks(timeout);
-                    Log.d(TAG, "splash: render success, showing");
-                    display.setAdEventListener(new UMUnionApi.SplashAdListener() {
-                        @Override public void onDismissed() {
-                            Log.d(TAG, "splash: dismissed");
-                            callback.onDismissed();
-                        }
-                        @Override public void onExposed() {
-                            Log.d(TAG, "splash: exposed");
-                            callback.onExposed();
-                        }
-                        @Override public void onClicked(android.view.View v) {
-                            Log.d(TAG, "splash: clicked");
-                        }
-                        @Override public void onError(int code, String msg) {
-                            Log.w(TAG, "splash: show error " + code + ": " + msg);
-                            callback.onSkip();
-                        }
-                    });
-                    display.show(container);
-                }
-
-                @Override
-                public void onRenderFailure(UMUnionApi.AdType type, String message) {
-                    mainHandler.removeCallbacks(timeout);
-                    Log.w(TAG, "splash: render failed: " + message);
-                    callback.onSkip();
-                }
-            }, (int) SPLASH_TIMEOUT_MS);
+            UMUnionSdk.loadSplashAd(config, loadListener, (int) SPLASH_TIMEOUT_MS);
             Log.d(TAG, "splash: loadSplashAd invoked");
         } catch (Throwable t) {
             mainHandler.removeCallbacks(timeout);
@@ -177,6 +134,8 @@ public final class UMAdSDK {
     /**
      * 加载浮窗广告并展示。
      * 必须在 init() 成功后调用,否则静默返回。
+     * SDK 3 参版本:loadFloatingBannerAd(Activity, UMAdConfig, AdCloseListener)
+     * SDK 内部完成加载与展示,仅需提供关闭回调。
      *
      * @param activity 用于展示浮窗的 Activity
      */
@@ -191,35 +150,8 @@ public final class UMAdSDK {
                     .setSlotId(FLOATING_SLOT_ID)
                     .build();
 
-            UMUnionSdk.loadFloatingBannerAd(activity, config,
-                new UMUnionApi.AdRenderListener<UMUnionApi.AdDisplay>() {
-                    @Override
-                    public void onSuccess(UMUnionApi.AdType type, UMUnionApi.AdDisplay display) {
-                        Log.d(TAG, "floating: ad request success");
-                    }
-
-                    @Override
-                    public void onFailure(UMUnionApi.AdType type, String message) {
-                        Log.w(TAG, "floating: ad request failed: " + message);
-                    }
-
-                    @Override
-                    public void onRenderSuccess(UMUnionApi.AdType type, UMUnionApi.AdDisplay display) {
-                        Log.d(TAG, "floating: render success, showing");
-                        display.setAdCloseListener(new UMUnionApi.AdCloseListener() {
-                            @Override
-                            public void onClosed(UMUnionApi.AdType type) {
-                                Log.d(TAG, "floating: closed");
-                            }
-                        });
-                        display.show(activity);
-                    }
-
-                    @Override
-                    public void onRenderFailure(UMUnionApi.AdType type, String message) {
-                        Log.w(TAG, "floating: render failed: " + message);
-                    }
-                });
+            UMUnionApi.AdCloseListener closeListener = new FloatingCloseListener();
+            UMUnionSdk.loadFloatingBannerAd(activity, config, closeListener);
             Log.d(TAG, "floating: loadFloatingBannerAd invoked");
         } catch (Throwable t) {
             Log.e(TAG, "floating: load failed", t);
@@ -232,5 +164,130 @@ public final class UMAdSDK {
         void onExposed();
         void onDismissed();
         void onSkip();
+    }
+
+    /** 命名 Runnable:开屏广告超时触发 onSkip(避免 Lambda 让 d8 崩溃) */
+    static class SplashTimeoutRunnable implements Runnable {
+        private final SplashAdCallback callback;
+        SplashTimeoutRunnable(SplashAdCallback callback) { this.callback = callback; }
+        @Override
+        public void run() {
+            Log.w(TAG, "splash: timeout, skip");
+            callback.onSkip();
+        }
+    }
+
+    /**
+     * 命名 AdLoadListener:开屏广告加载回调(用 raw type 规避 d8 8.2.2 泛型 NPE bug)。
+     * - onSuccess:拿到 UMSplashAD,注册 SplashAdListener 后 show(container)
+     * - onFailure:取消超时,回调 onSkip
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    static class SplashLoadListener implements UMUnionApi.AdLoadListener {
+        private final Activity activity;
+        private final FrameLayout container;
+        private final Handler mainHandler;
+        private final Runnable timeout;
+        private final SplashAdCallback callback;
+
+        SplashLoadListener(Activity activity, FrameLayout container,
+                           Handler mainHandler, Runnable timeout, SplashAdCallback callback) {
+            this.activity = activity;
+            this.container = container;
+            this.mainHandler = mainHandler;
+            this.timeout = timeout;
+            this.callback = callback;
+        }
+
+        @Override
+        public void onSuccess(UMUnionApi.AdType type, UMUnionApi.AdDisplay displayObj) {
+            Log.d(TAG, "splash: ad load success, registering listener");
+            try {
+                UMSplashAD display = (UMSplashAD) displayObj;
+                display.setAdEventListener(new SplashEventListener(callback));
+                // 必须在 UI 线程 show(用命名 Runnable,避免匿名类让 d8 崩溃)
+                activity.runOnUiThread(new SplashShowRunnable(display, container, callback));
+            } catch (Throwable t) {
+                mainHandler.removeCallbacks(timeout);
+                Log.e(TAG, "splash: onSuccess handle failed", t);
+                callback.onSkip();
+            }
+        }
+
+        @Override
+        public void onFailure(UMUnionApi.AdType type, String message) {
+            mainHandler.removeCallbacks(timeout);
+            Log.w(TAG, "splash: ad load failed: " + message);
+            callback.onSkip();
+        }
+    }
+
+    /**
+     * 命名 SplashAdListener:开屏广告展示/点击/错误/关闭回调。
+     * 继承 AdEventListener:onExposed / onClicked / onError
+     * 自身:onDismissed
+     */
+    static class SplashEventListener implements UMUnionApi.SplashAdListener {
+        private final SplashAdCallback callback;
+        private volatile boolean dismissed = false;
+
+        SplashEventListener(SplashAdCallback callback) { this.callback = callback; }
+
+        @Override
+        public void onExposed() {
+            Log.d(TAG, "splash: exposed");
+            callback.onExposed();
+        }
+
+        @Override
+        public void onClicked(View v) {
+            Log.d(TAG, "splash: clicked");
+        }
+
+        @Override
+        public void onError(int code, String msg) {
+            Log.w(TAG, "splash: show error " + code + ": " + msg);
+            if (!dismissed) callback.onSkip();
+        }
+
+        @Override
+        public void onDismissed() {
+            if (dismissed) return;
+            dismissed = true;
+            Log.d(TAG, "splash: dismissed");
+            callback.onDismissed();
+        }
+    }
+
+    /** 命名 AdCloseListener:浮窗广告关闭回调 */
+    static class FloatingCloseListener implements UMUnionApi.AdCloseListener {
+        @Override
+        public void onClosed(UMUnionApi.AdType type) {
+            Log.d(TAG, "floating: closed, type=" + type);
+        }
+    }
+
+    /** 命名 Runnable:在 UI 线程展示开屏广告(避免匿名类让 d8 崩溃) */
+    static class SplashShowRunnable implements Runnable {
+        private final UMSplashAD display;
+        private final ViewGroup container;
+        private final SplashAdCallback callback;
+
+        SplashShowRunnable(UMSplashAD display, ViewGroup container, SplashAdCallback callback) {
+            this.display = display;
+            this.container = container;
+            this.callback = callback;
+        }
+
+        @Override
+        public void run() {
+            try {
+                display.show(container);
+                callback.onLoaded();
+            } catch (Throwable t) {
+                Log.e(TAG, "splash: show failed", t);
+                callback.onSkip();
+            }
+        }
     }
 }
