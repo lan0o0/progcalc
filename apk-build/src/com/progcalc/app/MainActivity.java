@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.content.res.Configuration;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -34,6 +36,8 @@ public class MainActivity extends Activity {
     private volatile boolean homeEntered = false;
     // 标记浮窗广告是否已加载(避免重复加载)
     private volatile boolean floatingAdLoaded = false;
+    // 标记开屏广告是否正在加载(LayoutReadyListener 据此决定是否等待)
+    private volatile boolean splashAdPending = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -119,7 +123,10 @@ public class MainActivity extends Activity {
         if (agreed) {
             // 用户已同意,正式初始化 SDK 并加载开屏广告
             UMAdSDK.init(this);
+            splashAdPending = true;  // 标记广告加载中,LayoutReadyListener 据此等待
             UMAdSDK.loadSplashAd(this, splashAdContainer, new SplashCallback(this));
+            // 注意:不立即 goHome,等开屏广告回调(onDismissed/onSkip/onError)再 goHome
+            // LayoutReadyListener 仅作为兜底,且跳过广告已加载的情况
         } else {
             // 首次启动/未同意:跳过开屏广告,直接进入主程序
             // 前端协议门会展示,用户同意后通过 appNative.onAgreementAccepted() 通知原生
@@ -129,6 +136,8 @@ public class MainActivity extends Activity {
 
         // 关键修复:等 layout pass 完成再加载 URL,避免 WebView 还没 attach 就 load
         // 这是 Vivo / Android 16 上黑屏的根因
+        // 注意:仅在用户未同意或广告已跳过时才由 LayoutReadyListener 触发 goHome
+        // 广告加载中时,由广告回调触发 goHome
         webView.getViewTreeObserver().addOnGlobalLayoutListener(new LayoutReadyListener(this));
     }
 
@@ -185,8 +194,28 @@ public class MainActivity extends Activity {
         SplashCallback(MainActivity activity) { this.activity = activity; }
         @Override public void onLoaded() { /* 素材已就绪,等 onExposed */ }
         @Override public void onExposed() { /* 广告已展示,等 onDismissed */ }
-        @Override public void onDismissed() { activity.goHome(); }
-        @Override public void onSkip() { activity.goHome(); }
+        @Override public void onDismissed() {
+            activity.splashAdPending = false;
+            activity.goHome();
+        }
+        @Override public void onSkip() {
+            activity.splashAdPending = false;
+            activity.goHome();
+        }
+    }
+
+    /** 命名 Runnable:开屏广告兜底超时,防止广告回调不触发导致卡死 */
+    static class SplashFallbackRunnable implements Runnable {
+        private final MainActivity activity;
+        SplashFallbackRunnable(MainActivity activity) { this.activity = activity; }
+        @Override
+        public void run() {
+            if (!activity.homeEntered) {
+                Log.w(TAG, "splash ad fallback timeout, goHome");
+                activity.splashAdPending = false;
+                activity.goHome();
+            }
+        }
     }
 
     /** 命名内部类:等 layout pass 完成后进入主程序(与开屏广告回调共用 goHome) */
@@ -204,10 +233,17 @@ public class MainActivity extends Activity {
             if (w.getWidth() > 0 && w.getHeight() > 0) {
                 if (w.getTag() == null) {
                     w.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-                    Log.d(TAG, "layout ready, goHome");
-                    // 如果开屏广告未触发 goHome(如 SDK 未接入直接 onSkip),
-                    // layout 就绪后兜底进入主程序;goHome 内部会判重
-                    activity.goHome();
+                    // 如果开屏广告正在加载中,不立即 goHome,等广告回调触发
+                    // 广告回调(onSkip/onDismissed)或 6 秒兜底超时会触发 goHome
+                    if (activity.splashAdPending) {
+                        Log.d(TAG, "layout ready, but splash ad pending, wait for callback");
+                        // 设置 6 秒兜底超时(比广告 5 秒超时多 1 秒),防止广告回调不触发
+                        new Handler(Looper.getMainLooper()).postDelayed(
+                                new SplashFallbackRunnable(activity), 6000L);
+                    } else {
+                        Log.d(TAG, "layout ready, goHome");
+                        activity.goHome();
+                    }
                 }
             }
         }
