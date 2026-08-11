@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.progcalc.app"
-    android:versionCode="35"
-    android:versionName="2.11.13">
+    android:versionCode="36"
+    android:versionName="2.11.14">
 
     <!-- 基础网络权限(广告 SDK 加载素材需要) -->
     <uses-permission android:name="android.permission.INTERNET" />

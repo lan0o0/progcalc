@@ -82,6 +82,8 @@ public final class UMAdSDK {
             UMConfigure.submitPolicyGrantResult(context, true);
             // 2. 初始化广告联盟 SDK
             UMUnionSdk.init(context);
+            // 3. 注册全局广告回调(获取 show/click/failure 等事件,便于排查 error 2010)
+            UMUnionSdk.setAdCallback(new GlobalAdCallback());
             inited = true;
             Log.i(TAG, "UMEng SDK init done (user agreed)");
             return true;
@@ -138,11 +140,14 @@ public final class UMAdSDK {
     /**
      * 加载浮窗广告并展示。
      * 必须在 init() 成功后调用,否则静默返回。
-     * SDK 3 参版本:loadFloatingBannerAd(Activity, UMAdConfig, AdCloseListener)
-     * SDK 内部完成加载与展示,仅需提供关闭回调。
+     *
+     * 使用 UMUnionSdk.getApi().loadFloatingBannerAd() 获取 AdLoadListener 回调:
+     * - onSuccess:拿到 AdDisplay,手动 show() 展示,并注册关闭监听
+     * - onFailure:打印失败原因,便于排查
      *
      * @param activity 用于展示浮窗的 Activity
      */
+    @SuppressWarnings({"rawtypes", "unchecked"})
     public static void loadFloatingBannerAd(final Activity activity) {
         if (!inited) {
             Log.w(TAG, "floating: SDK not inited, skip");
@@ -154,13 +159,10 @@ public final class UMAdSDK {
                     .setSlotId(FLOATING_SLOT_ID)
                     .build();
 
-            UMUnionApi.AdCloseListener closeListener = new FloatingCloseListener();
-            UMUnionSdk.loadFloatingBannerAd(activity, config, closeListener);
-            Log.d(TAG, "floating: loadFloatingBannerAd invoked");
-
-            // 5 秒后自动关闭浮窗(SDK 3 参版本无主动关闭 API,遍历 DecorView 移除友盟 View)
-            new Handler(Looper.getMainLooper()).postDelayed(
-                    new FloatingAutoCloseRunnable(activity), FLOATING_AUTO_CLOSE_MS);
+            // 用 getApi() 版本获取 AdLoadListener 回调(raw type 规避 d8 泛型 NPE)
+            UMUnionApi.AdLoadListener loadListener = new FloatingLoadListener(activity);
+            UMUnionSdk.getApi().loadFloatingBannerAd(activity, config, loadListener);
+            Log.d(TAG, "floating: loadFloatingBannerAd invoked (via getApi)");
         } catch (Throwable t) {
             Log.e(TAG, "floating: load failed", t);
         }
@@ -319,11 +321,66 @@ public final class UMAdSDK {
         }
     }
 
+    /**
+     * 命名 AdLoadListener:浮窗广告加载回调(用 raw type 规避 d8 泛型 NPE)。
+     * - onSuccess:拿到 AdDisplay,注册关闭监听 + show() 展示,启动 5 秒自动关闭定时器
+     * - onFailure:打印失败原因(原来 3 参版本无此回调,加载失败时静默无日志)
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    static class FloatingLoadListener implements UMUnionApi.AdLoadListener {
+        private final Activity activity;
+
+        FloatingLoadListener(Activity activity) { this.activity = activity; }
+
+        @Override
+        public void onSuccess(UMUnionApi.AdType type, UMUnionApi.AdDisplay displayObj) {
+            Log.d(TAG, "floating: ad load success, show + start 5s auto-close timer");
+            try {
+                // 注册关闭监听
+                displayObj.setAdCloseListener(new FloatingCloseListener());
+                // show() 展示广告(SDK 会将广告 View 添加到 DecorView)
+                displayObj.show(activity);
+                // 5 秒后自动关闭(遍历 DecorView 移除友盟 View)
+                new Handler(Looper.getMainLooper()).postDelayed(
+                        new FloatingAutoCloseRunnable(activity), FLOATING_AUTO_CLOSE_MS);
+            } catch (Throwable t) {
+                Log.e(TAG, "floating: show failed", t);
+            }
+        }
+
+        @Override
+        public void onFailure(UMUnionApi.AdType type, String message) {
+            Log.w(TAG, "floating: ad load failed: " + message);
+        }
+    }
+
     /** 命名 AdCloseListener:浮窗广告关闭回调 */
     static class FloatingCloseListener implements UMUnionApi.AdCloseListener {
         @Override
         public void onClosed(UMUnionApi.AdType type) {
             Log.d(TAG, "floating: closed, type=" + type);
+        }
+    }
+
+    /**
+     * 全局广告回调:捕获所有广告类型的 show/click/failure 事件。
+     * 主要用于排查 error 2010(expose invalid)的根因:
+     * SDK 内部曝光上报失败时会调用 onFailure,此处打印详细信息。
+     */
+    static class GlobalAdCallback extends UMUnionApi.AdCallback {
+        @Override
+        public void onShow(UMUnionApi.AdType type) {
+            Log.d(TAG, "global: ad show, type=" + type);
+        }
+
+        @Override
+        public void onClicked(UMUnionApi.AdType type) {
+            Log.d(TAG, "global: ad clicked, type=" + type);
+        }
+
+        @Override
+        public void onFailure(UMUnionApi.AdType type, String message) {
+            Log.w(TAG, "global: ad failure, type=" + type + ", msg=" + message);
         }
     }
 
