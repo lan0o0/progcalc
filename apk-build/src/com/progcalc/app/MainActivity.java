@@ -38,6 +38,8 @@ public class MainActivity extends Activity {
     private volatile boolean floatingAdLoaded = false;
     // 标记开屏广告是否正在加载(LayoutReadyListener 据此决定是否等待)
     private volatile boolean splashAdPending = false;
+    // 标记开屏广告是否已调用 loadSplashAd(防止 onWindowFocusChanged 重复加载)
+    private volatile boolean splashAdLoaded = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -119,14 +121,14 @@ public class MainActivity extends Activity {
         // 2. 检查用户是否已同意协议(SharedPreferences 持久化)
         //    - 已同意 → init + 加载开屏广告(本次启动展示广告)
         //    - 未同意 → 跳过广告,等前端通知同意后再 init(本次启动不展示广告)
-        boolean agreed = AgreementState.isChecked(this);
+        final boolean agreed = AgreementState.isChecked(this);
         if (agreed) {
-            // 用户已同意,正式初始化 SDK 并加载开屏广告
+            // 用户已同意,正式初始化 SDK
             UMAdSDK.init(this);
             splashAdPending = true;  // 标记广告加载中,LayoutReadyListener 据此等待
-            UMAdSDK.loadSplashAd(this, splashAdContainer, new SplashCallback(this));
-            // 注意:不立即 goHome,等开屏广告回调(onDismissed/onSkip/onError)再 goHome
-            // LayoutReadyListener 仅作为兜底,且跳过广告已加载的情况
+            // 关键修复:不在 onCreate 中直接加载广告,延迟到 onWindowFocusChanged 后
+            // 否则 container 未 attach/measure,SDK 检测到无尺寸会 discard 广告
+            Log.d(TAG, "user agreed, splash ad deferred to onWindowFocusChanged");
         } else {
             // 首次启动/未同意:跳过开屏广告,直接进入主程序
             // 前端协议门会展示,用户同意后通过 appNative.onAgreementAccepted() 通知原生
@@ -262,6 +264,24 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         if (webView != null) webView.onResume();
+    }
+
+    /**
+     * 窗口首次获得焦点时加载开屏广告(关键修复)。
+     *
+     * 友盟 SDK 在 onCreate 中同步调用 loadSplashAd 会因 container 未完成
+     * attach/measure/layout 而触发 "ad action:discard"(code 2003)。
+     * onWindowFocusChanged(true) 时,所有 View 已完成 layout,此时加载广告
+     * 才能正常 expose。
+     */
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus && splashAdPending && !splashAdLoaded) {
+            splashAdLoaded = true;
+            Log.d(TAG, "window focused, loading splash ad now");
+            UMAdSDK.loadSplashAd(this, splashAdContainer, new SplashCallback(this));
+        }
     }
 
     @Override

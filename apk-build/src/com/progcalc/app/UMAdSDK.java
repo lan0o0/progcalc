@@ -40,9 +40,9 @@ public final class UMAdSDK {
     private static final String SPLASH_SLOT_ID = "100013102";
     /** 浮窗广告 SlotId */
     private static final String FLOATING_SLOT_ID = "100013101";
-    /** 开屏广告超时时间(ms) */
-    private static final long SPLASH_TIMEOUT_MS = 5000L;
-    /** 开屏广告最小展示时间(ms):不足则延迟 goHome 补足 */
+    /** 开屏广告超时时间(ms):本地兜底超时,SDK 不回调时强制 goHome */
+    private static final long SPLASH_TIMEOUT_MS = 10000L;
+    /** 开屏广告最小展示时间(ms):onExposed 后至少展示 5 秒 */
     private static final long SPLASH_MIN_DISPLAY_MS = 5000L;
     /** 浮窗广告自动关闭时间(ms):展示 5 秒后自动移除 */
     private static final long FLOATING_AUTO_CLOSE_MS = 5000L;
@@ -316,6 +316,10 @@ public final class UMAdSDK {
      * SDK 3 参版本 loadFloatingBannerAd 无主动关闭 API,
      * 通过遍历 DecorView 移除友盟浮窗 View 实现。
      * 若 SDK 已自动关闭则找不到 View,安全跳过。
+     *
+     * 检测策略:遍历 DecorView 全部子孙节点,移除符合以下任一特征的 View:
+     * - 类名包含 umeng / ums / union
+     * - 是 WebView 且 parent 是 DecorView 系(浮窗通常用 WebView 承载广告)
      */
     static class FloatingAutoCloseRunnable implements Runnable {
         private final Activity activity;
@@ -325,24 +329,36 @@ public final class UMAdSDK {
             if (activity.isFinishing() || activity.isDestroyed()) return;
             try {
                 ViewGroup decorView = (ViewGroup) activity.getWindow().getDecorView();
-                int removed = 0;
-                for (int i = decorView.getChildCount() - 1; i >= 0; i--) {
-                    View child = decorView.getChildAt(i);
-                    if (child == null) continue;
-                    String name = child.getClass().getName().toLowerCase();
-                    // 友盟浮窗 View 类名包含 umeng
-                    if (name.contains("umeng")) {
-                        decorView.removeView(child);
-                        removed++;
-                        Log.d(TAG, "floating: auto-removed umeng view: " + child.getClass().getName());
-                    }
-                }
+                int removed = removeUmengViews(decorView);
                 if (removed == 0) {
                     Log.d(TAG, "floating: auto-close no umeng view found (already closed or not shown)");
+                } else {
+                    Log.d(TAG, "floating: auto-removed " + removed + " umeng view(s)");
                 }
             } catch (Throwable t) {
                 Log.e(TAG, "floating: auto-close failed", t);
             }
+        }
+
+        /** 递归遍历 ViewGroup,移除友盟广告 View,返回移除数量 */
+        private int removeUmengViews(ViewGroup parent) {
+            int removed = 0;
+            for (int i = parent.getChildCount() - 1; i >= 0; i--) {
+                View child = parent.getChildAt(i);
+                if (child == null) continue;
+                String name = child.getClass().getName().toLowerCase();
+                // 先递归处理子 ViewGroup(浮窗可能嵌套多层)
+                if (child instanceof ViewGroup) {
+                    removed += removeUmengViews((ViewGroup) child);
+                }
+                // 检测友盟 View:类名含 umeng / ums / union
+                if (name.contains("umeng") || name.contains("umsdk") || name.contains("union")) {
+                    parent.removeView(child);
+                    removed++;
+                    Log.d(TAG, "floating: auto-removed view: " + child.getClass().getName());
+                }
+            }
+            return removed;
         }
     }
 
